@@ -1,0 +1,129 @@
+.chat-window {
+  flex: 1;
+  min-height: 100vh;
+  background: #1f1f1f;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 40px 18px;
+}
+
+.chat-window__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.chat-window__model,
+.chat-window__profile,
+.chat-window__send {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.chat-window__model {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  color: #f2f2f2;
+  font-size: 1.05rem;
+}
+
+.chat-window__model svg {
+  width: 16px;
+  height: 16px;
+}
+
+.chat-window__profile {
+  width: 32px;
+  height: 32px;
+  color: #4c99ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-window__profile svg {
+  width: 100%;
+  height: 100%;
+}
+
+.chat-window__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 0;
+}
+
+.chat-window__spacer {
+  flex: 1;
+}
+
+.chat-window__dock {
+  width: min(100%, 560px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-window__input-shell {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: #2a2a2a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-window__input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #efefef;
+  font-size: 0.98rem;
+}
+
+.chat-window__input::placeholder {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.chat-window__send {
+  width: 28px;
+  height: 28px;
+  color: #efefef;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-window__send svg {
+  width: 20px;
+  height: 20px;
+}
+
+.chat-window__note {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .chat-window {
+    min-height: auto;
+    padding: 20px 16px 16px;
+  }
+
+  .chat-window__dock {
+    width: 100%;
+  }
+}
