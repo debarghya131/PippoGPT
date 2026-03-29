@@ -13,13 +13,37 @@ const buildThreadTitle = (title, message) => {
   return message.trim().slice(0, 40);
 };
 
+const sanitizeThreadTitle = (title, messages = []) => {
+  const normalizedTitle = typeof title === "string" ? title.replace(/\s+/g, " ").trim() : "";
+  const firstUserMessage = messages.find((message) => message.role === "user")?.content?.trim() || "";
+  const fallbackTitle = firstUserMessage.slice(0, 40) || "New Thread";
+
+  if (!normalizedTitle) {
+    return fallbackTitle;
+  }
+
+  const looksCorrupted =
+    normalizedTitle.includes("PippoGPT") ||
+    normalizedTitle.includes("You ") ||
+    normalizedTitle.length > 60;
+
+  return looksCorrupted ? fallbackTitle : normalizedTitle;
+};
+
 router.get("/thread", async (req, res) => {
   try {
     const threads = await Thread.find()
       .sort({ updatedAt: -1 })
-      .select("threadId title createdAt updatedAt");
+      .select("threadId title messages createdAt updatedAt");
 
-    return res.status(200).json({ threads });
+    const normalizedThreads = threads.map((thread) => ({
+      threadId: thread.threadId,
+      title: sanitizeThreadTitle(thread.title, thread.messages),
+      createdAt: thread.createdAt,
+      updatedAt: thread.updatedAt,
+    }));
+
+    return res.status(200).json({ threads: normalizedThreads });
   } catch (error) {
     console.error("Get threads error:", error.message);
     return res.status(500).json({ error: "Failed to fetch threads" });
@@ -33,6 +57,8 @@ router.get("/thread/:threadId", async (req, res) => {
     if (!thread) {
       return res.status(404).json({ error: "Thread not found" });
     }
+
+    thread.title = sanitizeThreadTitle(thread.title, thread.messages);
 
     return res.status(200).json({ thread });
   } catch (error) {
@@ -85,7 +111,7 @@ router.post("/chat", async (req, res) => {
 
     thread.messages.push(userMessage);
 
-    const reply = await getOpenAIAPIResponse(userMessage.content);
+    const reply = await getOpenAIAPIResponse(thread.messages);
 
     thread.messages.push({
       role: "assistant",

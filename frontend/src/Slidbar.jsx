@@ -1,12 +1,30 @@
+import { useState } from "react";
 import "./Slidbar.css";
 
-const threads = ["thread1", "thread2", "thread3"];
+function Slidbar({
+  threads,
+  activeThreadId,
+  isLoading,
+  deletingThreadId,
+  onNewChat,
+  onSelectThread,
+  onDeleteThread,
+}) {
+  const [showAllThreads, setShowAllThreads] = useState(false);
+  const visibleThreadCount = 13;
 
-function Slidbar() {
+  const visibleThreads = showAllThreads ? threads : threads.slice(0, visibleThreadCount);
+  const hasHiddenThreads = threads.length > visibleThreadCount;
+
   return (
     <aside className="slidbar">
       <div className="slidbar__top">
-        <button className="slidbar__compose" type="button" aria-label="Start new chat">
+        <button
+          className="slidbar__compose"
+          type="button"
+          aria-label="Start new chat"
+          onClick={onNewChat}
+        >
           <div className="slidbar__brand">
             <span className="slidbar__logo-wrap">
               <img className="slidbar__logo" src="/assets/pippo.png" alt="Pippo logo" />
@@ -31,11 +49,55 @@ function Slidbar() {
         </button>
 
         <div className="slidbar__threads">
-          {threads.map((thread) => (
-            <button key={thread} className="slidbar__thread" type="button">
-              {thread}
-            </button>
-          ))}
+          {isLoading ? (
+            <p className="slidbar__status">Loading threads...</p>
+          ) : threads.length === 0 ? (
+            <p className="slidbar__status">No chats yet. Start a new one.</p>
+          ) : (
+            <>
+              {visibleThreads.map((thread) => (
+                <div
+                  key={thread.threadId}
+                  className={`slidbar__thread-row${
+                    activeThreadId === thread.threadId ? " slidbar__thread-row--active" : ""
+                  }`}
+                >
+                  <button
+                    className={`slidbar__thread${
+                      activeThreadId === thread.threadId ? " slidbar__thread--active" : ""
+                    }`}
+                    type="button"
+                    onClick={() => onSelectThread(thread.threadId)}
+                  >
+                    {thread.title || "Untitled chat"}
+                  </button>
+                  <button
+                    className="slidbar__delete"
+                    type="button"
+                    aria-label={`Delete ${thread.title || "thread"}`}
+                    onClick={() => onDeleteThread(thread.threadId)}
+                    disabled={deletingThreadId === thread.threadId}
+                  >
+                    {deletingThreadId === thread.threadId ? (
+                      "..."
+                    ) : (
+                      <i className="fa-regular fa-trash-can" aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
+              ))}
+
+              {hasHiddenThreads ? (
+                <button
+                  className="slidbar__more"
+                  type="button"
+                  onClick={() => setShowAllThreads((currentValue) => !currentValue)}
+                >
+                  {showAllThreads ? "Show less" : `More (${threads.length - visibleThreadCount})`}
+                </button>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
 
