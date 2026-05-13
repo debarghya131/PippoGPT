@@ -1,19 +1,102 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
 import "./Chat.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const EMPTY_PROMPTS = ["Write code", "Explain a topic", "Summarize text"];
+const DEMO_MODELS = [
+  "PippoGPT Nova",
+  "PippoGPT Neon",
+  "PippoGPT Orbit",
+  "PippoGPT X",
+  "PippoGPT Quantum ✨",
+];
 
 function MessageContent({ content }) {
+  const [copiedCode, setCopiedCode] = useState("");
+
+  const getNodeText = (node) => {
+    if (typeof node === "string") {
+      return node;
+    }
+
+    if (Array.isArray(node)) {
+      return node.map(getNodeText).join("");
+    }
+
+    if (node?.props?.children) {
+      return getNodeText(node.props.children);
+    }
+
+    return "";
+  };
+
+  const copyCode = async (code) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      window.setTimeout(() => setCopiedCode(""), 1200);
+    } catch (error) {
+      console.error("Copy failed:", error.message);
+    }
+  };
+
   return (
     <div className="chat-window__message-body">
       <ReactMarkdown
         rehypePlugins={[rehypeHighlight]}
         components={{
           p: ({ children }) => <p className="chat-window__message-text">{children}</p>,
-          pre: ({ children }) => <pre className="chat-window__code-block">{children}</pre>,
+          pre: ({ children }) => {
+            const code = getNodeText(children).replace(/\n$/, "");
+            const isCopied = copiedCode === code && code.length > 0;
+
+            return (
+              <div className="chat-window__code-shell">
+                <button
+                  className={`chat-window__copy-code${isCopied ? " chat-window__copy-code--done" : ""}`}
+                  type="button"
+                  aria-label={isCopied ? "Copied" : "Copy code"}
+                  onClick={() => copyCode(String(code))}
+                >
+                  {isCopied ? (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="m5 13 4 4L19 7"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                      />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M9 8.5a2.5 2.5 0 0 1 2.5-2.5H18a2.5 2.5 0 0 1 2.5 2.5V15A2.5 2.5 0 0 1 18 17.5h-6.5A2.5 2.5 0 0 1 9 15V8.5Z"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.8"
+                      />
+                      <path
+                        d="M15 6v-.5A2.5 2.5 0 0 0 12.5 3H6a2.5 2.5 0 0 0-2.5 2.5V12A2.5 2.5 0 0 0 6 14.5h.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.8"
+                      />
+                    </svg>
+                  )}
+                </button>
+                <pre className="chat-window__code-block">{children}</pre>
+              </div>
+            );
+          },
           code: ({ className, children, ...props }) => (
             <code className={className} {...props}>
               {children}
@@ -32,21 +115,73 @@ function AssistantLabel() {
 }
 
 function ChatWindow({
+  userName,
+  isAuthenticated,
   activeThreadId,
+  threadSelectionKey,
   messages,
   setMessages,
+  authHeaders,
+  onRequireLogin,
+  onOpenSidebar,
+  onLoginClick,
+  onLogout,
   onThreadCreated,
   onRefreshThreads,
 }) {
+  const messagesContainerRef = useRef(null);
+  const pendingScrollKeyRef = useRef(0);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const isEmptyChat = messages.length === 0 && !isLoading;
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setError("");
+    }
+  }, [isAuthenticated]);
+
+  const scrollMessagesToTop = () => {
+    if (!messagesContainerRef.current) {
+      return;
+    }
+
+    messagesContainerRef.current.scrollTop = 0;
+  };
+
+  useEffect(() => {
+    pendingScrollKeyRef.current = threadSelectionKey;
+    scrollMessagesToTop();
+    requestAnimationFrame(scrollMessagesToTop);
+  }, [activeThreadId, threadSelectionKey]);
+
+  useEffect(() => {
+    if (pendingScrollKeyRef.current !== threadSelectionKey) {
+      return;
+    }
+
+    requestAnimationFrame(scrollMessagesToTop);
+    const timeoutId = window.setTimeout(() => {
+      scrollMessagesToTop();
+      pendingScrollKeyRef.current = 0;
+    }, 90);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [messages, threadSelectionKey]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     const trimmedInput = input.trim();
     if (!trimmedInput || isLoading) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      setError("You need to login first.");
+      onRequireLogin();
       return;
     }
 
@@ -65,6 +200,7 @@ function ChatWindow({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...authHeaders(),
         },
         body: JSON.stringify({
           message: trimmedInput,
@@ -97,48 +233,89 @@ function ChatWindow({
   return (
     <main className="chat-window">
       <div className="chat-window__topbar">
-        <button className="chat-window__model" type="button">
-          <span>PippoGPT</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="m7 10 5 5 5-5"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.8"
-            />
-          </svg>
-        </button>
+        <div className="chat-window__topbar-left">
+          <button
+            className="chat-window__menu-button"
+            type="button"
+            aria-label="Open sidebar"
+            onClick={onOpenSidebar}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M4 7h16M4 12h16M4 17h16"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeWidth="1.9"
+              />
+            </svg>
+          </button>
 
-        <button className="chat-window__profile" type="button" aria-label="Profile">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-3.314 0-6 1.79-6 4v1h12v-1c0-2.21-2.686-4-6-4Z"
-              fill="currentColor"
-            />
-          </svg>
-        </button>
+          <div className="chat-window__model-menu">
+            <button
+              className="chat-window__model"
+              type="button"
+              aria-expanded={isModelMenuOpen}
+              onClick={() => setIsModelMenuOpen((currentValue) => !currentValue)}
+            >
+              <span>PippoGPT</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="m7 10 5 5 5-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.8"
+                />
+              </svg>
+            </button>
+
+            {isModelMenuOpen ? (
+              <div className="chat-window__model-options">
+                {DEMO_MODELS.map((model) => (
+                  <button
+                    className="chat-window__model-option"
+                    key={model}
+                    type="button"
+                    onClick={() => setIsModelMenuOpen(false)}
+                  >
+                    {model}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {isAuthenticated ? (
+          <button className="chat-window__auth-button" type="button" onClick={onLogout}>
+            Logout
+          </button>
+        ) : (
+          <button className="chat-window__auth-button" type="button" onClick={onLoginClick}>
+            Login
+          </button>
+        )}
       </div>
 
-      <section className="chat-window__content">
+      <section
+        className={`chat-window__content${
+          isEmptyChat ? " chat-window__content--empty" : ""
+        }`}
+      >
         <div
+          ref={messagesContainerRef}
           className={`chat-window__messages${
-            messages.length === 0 && !isLoading ? " chat-window__messages--empty" : ""
+            isEmptyChat ? " chat-window__messages--empty" : ""
           }`}
         >
           {messages.length === 0 ? (
             <div className="chat-window__empty">
               <div className="chat-window__empty-copy">
                 <div className="chat-window__empty-heading">
-                  <h2>Start a chat with PippoGPT</h2>
-                  <img
-                    className="chat-window__empty-image"
-                    src="/assets/pippo.png"
-                    alt="Pippo"
-                  />
+                  <h2>How can I help, {userName}?</h2>
                 </div>
-                <p>&quot;Ask me anything, and I&apos;ll do my best to help you.&quot;</p>
               </div>
             </div>
           ) : (
@@ -258,6 +435,21 @@ function ChatWindow({
               </button>
             </div>
           </form>
+
+          {isEmptyChat ? (
+            <div className="chat-window__prompt-chips" aria-label="Prompt suggestions">
+              {EMPTY_PROMPTS.map((prompt) => (
+                <button
+                  className="chat-window__prompt-chip"
+                  key={prompt}
+                  type="button"
+                  onClick={() => setInput(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <p className="chat-window__note">
             PippoGPT can make mistakes. Check important info. See Cookie Preferences.

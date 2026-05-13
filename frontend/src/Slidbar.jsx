@@ -2,6 +2,8 @@ import { useState } from "react";
 import "./Slidbar.css";
 
 function Slidbar({
+  isOpen,
+  isDemoMode,
   threads,
   activeThreadId,
   isLoading,
@@ -15,9 +17,15 @@ function Slidbar({
 
   const visibleThreads = showAllThreads ? threads : threads.slice(0, visibleThreadCount);
   const hasHiddenThreads = threads.length > visibleThreadCount;
+  const featuredThreadTitles = new Set([
+    "Debarghya Bandyopadhyay Chat",
+    "Semester Wise Engineering Guidance",
+    "3-Month Interview Preparation Roadmap Chat",
+  ]);
+  const isFeaturedThread = (thread) => isDemoMode && featuredThreadTitles.has(thread.title);
 
   return (
-    <aside className="slidbar">
+    <aside className={`slidbar${isOpen ? " slidbar--open" : ""}`}>
       <div className="slidbar__top">
         <button
           className="slidbar__compose"
@@ -49,6 +57,7 @@ function Slidbar({
         </button>
 
         <div className="slidbar__threads">
+          <h2 className="slidbar__section-heading">Recents</h2>
           {isLoading ? (
             <p className="slidbar__status">Loading threads...</p>
           ) : threads.length === 0 ? (
@@ -60,11 +69,14 @@ function Slidbar({
                   key={thread.threadId}
                   className={`slidbar__thread-row${
                     activeThreadId === thread.threadId ? " slidbar__thread-row--active" : ""
+                  }${isFeaturedThread(thread) ? " slidbar__thread-row--featured" : ""
                   }`}
                 >
                   <button
                     className={`slidbar__thread${
                       activeThreadId === thread.threadId ? " slidbar__thread--active" : ""
+                    }${isFeaturedThread(thread) ? " slidbar__thread--featured" : ""
+                    }${!isDemoMode ? " slidbar__thread--truncate" : ""
                     }`}
                     type="button"
                     onClick={() => onSelectThread(thread.threadId)}
@@ -81,7 +93,16 @@ function Slidbar({
                     {deletingThreadId === thread.threadId ? (
                       "..."
                     ) : (
-                      <i className="fa-regular fa-trash-can" aria-hidden="true" />
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="1.8"
+                        />
+                      </svg>
                     )}
                   </button>
                 </div>

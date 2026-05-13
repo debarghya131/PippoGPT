@@ -2,8 +2,11 @@ import { Router } from "express";
 import { randomUUID } from "crypto";
 import Thread from "../models/Thread.js";
 import getOpenAIAPIResponse from "../utils/Openai.js";
+import { requireAuth } from "../utils/Auth.js";
 
 const router = Router();
+
+router.use(requireAuth);
 
 const buildThreadTitle = (title, message) => {
   if (title && typeof title === "string" && title.trim()) {
@@ -32,7 +35,7 @@ const sanitizeThreadTitle = (title, messages = []) => {
 
 router.get("/thread", async (req, res) => {
   try {
-    const threads = await Thread.find()
+    const threads = await Thread.find({ userId: req.user._id })
       .sort({ updatedAt: -1 })
       .select("threadId title messages createdAt updatedAt");
 
@@ -52,7 +55,10 @@ router.get("/thread", async (req, res) => {
 
 router.get("/thread/:threadId", async (req, res) => {
   try {
-    const thread = await Thread.findOne({ threadId: req.params.threadId });
+    const thread = await Thread.findOne({
+      threadId: req.params.threadId,
+      userId: req.user._id,
+    });
 
     if (!thread) {
       return res.status(404).json({ error: "Thread not found" });
@@ -71,6 +77,7 @@ router.delete("/thread/:threadId", async (req, res) => {
   try {
     const deletedThread = await Thread.findOneAndDelete({
       threadId: req.params.threadId,
+      userId: req.user._id,
     });
 
     if (!deletedThread) {
@@ -94,11 +101,15 @@ router.post("/chat", async (req, res) => {
   const currentThreadId = threadId || randomUUID();
 
   try {
-    let thread = await Thread.findOne({ threadId: currentThreadId });
+    let thread = await Thread.findOne({
+      threadId: currentThreadId,
+      userId: req.user._id,
+    });
 
     if (!thread) {
       thread = new Thread({
         threadId: currentThreadId,
+        userId: req.user._id,
         title: buildThreadTitle(title, message),
         messages: [],
       });
