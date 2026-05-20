@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Children, cloneElement, isValidElement, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
@@ -16,6 +16,7 @@ const DEMO_MODELS = [
 
 function MessageContent({ content }) {
   const [copiedCode, setCopiedCode] = useState("");
+  const shouldHighlightLifetime = content.includes("rate_limit_error");
 
   const getNodeText = (node) => {
     if (typeof node === "string") {
@@ -33,6 +34,32 @@ function MessageContent({ content }) {
     return "";
   };
 
+  const highlightLifetime = (node) => {
+    if (typeof node === "string") {
+      return node.split(/(lifetime)/gi).map((part, index) =>
+        part.toLowerCase() === "lifetime" ? (
+          <span className="chat-window__message-danger-word" key={`${part}-${index}`}>
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      );
+    }
+
+    if (Array.isArray(node)) {
+      return node.map((child) => highlightLifetime(child));
+    }
+
+    if (isValidElement(node)) {
+      return cloneElement(node, {
+        children: highlightLifetime(node.props.children),
+      });
+    }
+
+    return node;
+  };
+
   const copyCode = async (code) => {
     try {
       await navigator.clipboard.writeText(code);
@@ -48,7 +75,11 @@ function MessageContent({ content }) {
       <ReactMarkdown
         rehypePlugins={[rehypeHighlight]}
         components={{
-          p: ({ children }) => <p className="chat-window__message-text">{children}</p>,
+          p: ({ children }) => (
+            <p className="chat-window__message-text">
+              {shouldHighlightLifetime ? highlightLifetime(Children.toArray(children)) : children}
+            </p>
+          ),
           pre: ({ children }) => {
             const code = getNodeText(children).replace(/\n$/, "");
             const isCopied = copiedCode === code && code.length > 0;

@@ -140,6 +140,203 @@ const DEMO_THREAD_ITEMS = [
     ],
   },
   {
+    threadId: "demo-attachment-overthinking",
+    title: "Attachment & Overthinking Chat",
+    messages: [
+      { role: "user", content: "why attachment hurts so much" },
+      {
+        role: "assistant",
+        content:
+          "Attachment hurts when your happiness and peace start depending too much on one person.",
+      },
+      { role: "user", content: "what does that mean" },
+      {
+        role: "assistant",
+        content:
+          "It means your mood slowly becomes controlled by their replies, attention, behavior, or validation.",
+      },
+      { role: "user", content: "example" },
+      {
+        role: "assistant",
+        content:
+          "For example, if they reply fast you feel happy, but if they reply late you suddenly feel anxious or upset.",
+      },
+      { role: "user", content: "why does this happen" },
+      {
+        role: "assistant",
+        content:
+          "Your brain starts treating that person like an emotional need instead of just someone you care about.",
+      },
+      { role: "user", content: "signs of unhealthy attachment" },
+      {
+        role: "assistant",
+        content:
+          "Constant overthinking, checking messages repeatedly, fear of being ignored, jealousy, and losing focus on your own life.",
+      },
+      { role: "user", content: "real life example" },
+      {
+        role: "assistant",
+        content:
+          "For example, someone may sit to study or code, but keeps checking their phone every few minutes hoping for a reply.",
+      },
+      { role: "user", content: "attachment affects studies also" },
+      {
+        role: "assistant",
+        content:
+          "Yes, intense attachment can quietly drain focus, motivation, sleep, and productivity.",
+      },
+      { role: "user", content: "another example" },
+      {
+        role: "assistant",
+        content:
+          "For example, after seeing a dry text or story upload, someone may spend hours overthinking instead of focusing on gym, coding, or exams.",
+      },
+      { role: "user", content: "why overthinking increases" },
+      {
+        role: "assistant",
+        content:
+          "Because the mind keeps searching for reassurance and hidden meanings in small actions.",
+      },
+      { role: "user", content: "balanced connection means" },
+      {
+        role: "assistant",
+        content:
+          "Caring about someone while still keeping your own goals, routine, confidence, and emotional stability intact.",
+      },
+      { role: "user", content: "how to reduce attachment" },
+      {
+        role: "assistant",
+        content:
+          "Focus more on your own growth — studies, fitness, skills, hobbies, friends, and self-respect.",
+      },
+      { role: "user", content: "final advice" },
+      {
+        role: "assistant",
+        content:
+          "The stronger your own identity becomes, the less emotionally dependent you feel on others 🌱",
+      },
+    ],
+  },
+  {
+    threadId: "demo-limerence",
+    title: "Limerence Chat",
+    messages: [
+      { role: "user", content: "what is limerence" },
+      {
+        role: "assistant",
+        content:
+          "Limerence is an intense emotional obsession where someone constantly craves attention, validation, or emotional connection from a specific person.",
+      },
+      { role: "user", content: "is it same as love" },
+      {
+        role: "assistant",
+        content:
+          "Not exactly. Love is usually calm and stable, while limerence feels intense, obsessive, and emotionally consuming.",
+      },
+      { role: "user", content: "example" },
+      {
+        role: "assistant",
+        content:
+          "For example, someone may think about one person all day even while studying, coding, eating, or trying to sleep.",
+      },
+      { role: "user", content: "why does it happen" },
+      {
+        role: "assistant",
+        content:
+          "Usually because the brain becomes emotionally attached to the excitement, uncertainty, and hope of getting attention or affection.",
+      },
+      { role: "user", content: "signs of limerence" },
+      {
+        role: "assistant",
+        content:
+          "Constant daydreaming, checking messages repeatedly, emotional dependence, overanalyzing small actions, and craving validation.",
+      },
+      { role: "user", content: "real life example" },
+      {
+        role: "assistant",
+        content:
+          "For example, if the person replies warmly, you suddenly feel extremely happy. But if they reply dryly or disappear for a few hours, your mood crashes completely.",
+      },
+      { role: "user", content: "why small things hurt so much" },
+      {
+        role: "assistant",
+        content:
+          "Because the brain starts giving emotional meaning to tiny actions like reply timing, emojis, stories, or online status.",
+      },
+      { role: "user", content: "another example" },
+      {
+        role: "assistant",
+        content:
+          "For example, someone uploads a story but does not reply to your message. Your mind immediately starts overthinking:\n\"Did I do something wrong?\"\n\"Are they losing interest?\"\n\"Do they like someone else?\"",
+      },
+      { role: "user", content: "limerence affects studies also" },
+      {
+        role: "assistant",
+        content:
+          "Yes. It can quietly consume mental energy and reduce focus on studies, gym, sleep, coding, and personal goals.",
+      },
+      { role: "user", content: "deep example" },
+      {
+        role: "assistant",
+        content:
+          "Imagine an engineering student preparing for placements or GATE. They open their laptop to study DSA, but after every few minutes they check Instagram, WhatsApp, or notifications hoping for a message from one person. Even when no conversation is happening, their mind keeps imagining future scenarios, replaying old chats, or thinking about what the other person feels.",
+      },
+      { role: "user", content: "why is it addictive" },
+      {
+        role: "assistant",
+        content:
+          "Because emotional uncertainty creates dopamine highs and lows. Occasional attention or validation makes the brain crave more.",
+      },
+      { role: "user", content: "difference between healthy connection and limerence" },
+      {
+        role: "assistant",
+        content:
+          "In a healthy connection, you care about someone while still functioning independently. In limerence, your emotional stability starts depending too much on them.",
+      },
+      { role: "user", content: "how to reduce limerence" },
+      {
+        role: "assistant",
+        content:
+          "Rebuild focus on your own life:\nstudies\ngym\ncoding\nhobbies\nfriends\nsleep\nself-growth",
+      },
+      { role: "user", content: "does limerence go away" },
+      {
+        role: "assistant",
+        content:
+          "Yes. As emotional dependence decreases and your own identity becomes stronger, limerence usually fades over time.",
+      },
+      { role: "user", content: "final advice" },
+      {
+        role: "assistant",
+        content:
+          "Don’t make one person the center of your entire emotional world. The more balanced your life becomes, the more peaceful your mind feels 🌱",
+      },
+    ],
+  },
+  {
+    threadId: "demo-moving-on-breakup",
+    title: "Moving On After Breakup Chat",
+    messages: [
+      { role: "user", content: "How do I move on after a breakup?" },
+      { role: "assistant", content: "Find another love as soon as possible." },
+      { role: "user", content: "It’s hard to do that. It’s not possible for me." },
+      { role: "assistant", content: "That is the one and only solution." },
+      { role: "user", content: "No, please provide me another solution." },
+      { role: "assistant", content: "That is the reality 🙂" },
+      { role: "user", content: "But I still miss her every day." },
+      { role: "assistant", content: "🙂" },
+      { role: "user", content: "Please provide me another impactful solution." },
+      { role: "assistant", content: "🙂" },
+      { role: "user", content: "Please say something." },
+      { role: "assistant", content: "⏳⏳⏳" },
+      { role: "user", content: "What happened?" },
+      {
+        role: "assistant",
+        content: "429 - rate_limit_error: You have exceeded your lifetime credit limit.",
+      },
+    ],
+  },
+  {
     threadId: "demo-3",
     title: "Merge Sort Chat",
     messages: [

@@ -334,6 +334,11 @@
   color: #22c55e;
 }
 
+.chat-window__message-danger-word {
+  color: #ef4444;
+  font-weight: 700;
+}
+
 .chat-window__code-shell {
   position: relative;
 }
