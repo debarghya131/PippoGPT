@@ -7,6 +7,7 @@
 html {
     min-width: 0;
     overflow: hidden;
+    height: 100%;
 }
 
 body{
@@ -15,6 +16,7 @@ body{
     font-family: Arial, sans-serif;
     background-color: #212121;
     overflow: hidden;
+    min-height: 100%;
 }
 
 .App {
@@ -50,6 +52,17 @@ body{
     line-height: 1.4;
     text-align: center;
     transform: translateX(-50%);
+}
+
+@media (max-width: 767px) {
+    .App-notice {
+        top: max(12px, env(safe-area-inset-top));
+        max-width: calc(100vw - 24px);
+        padding: 10px 14px;
+        border-radius: 18px;
+        font-size: 0.86rem;
+        line-height: 1.35;
+    }
 }
 
 .App-sidebar-backdrop {

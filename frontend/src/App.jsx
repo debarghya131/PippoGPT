@@ -257,6 +257,7 @@ function App() {
           onOpenSidebar={() => setIsSidebarOpen(true)}
           onLoginClick={() => setIsAuthModalOpen(true)}
           onLogout={handleLogout}
+          onShowNotice={showNotice}
           onThreadCreated={(threadId) => {
             setActiveThreadId(threadId);
             loadThreads(threadId);

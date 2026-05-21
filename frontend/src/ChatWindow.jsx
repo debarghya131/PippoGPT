@@ -157,6 +157,7 @@ function ChatWindow({
   onOpenSidebar,
   onLoginClick,
   onLogout,
+  onShowNotice,
   onThreadCreated,
   onRefreshThreads,
 }) {
@@ -243,6 +244,13 @@ function ChatWindow({
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 429) {
+          const rateLimitMessage =
+            "Daily limit reached. Please check demo threads or come back tomorrow.";
+          onShowNotice?.(rateLimitMessage);
+          throw new Error(rateLimitMessage);
+        }
+
         throw new Error(data.error || "Failed to send message");
       }
 
@@ -259,6 +267,14 @@ function ChatWindow({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCheckDemoThreads = async () => {
+    setMessages([]);
+    if (isAuthenticated) {
+      await onLogout();
+    }
+    onOpenSidebar();
   };
 
   return (
@@ -394,7 +410,20 @@ function ChatWindow({
         </div>
 
         <div className="chat-window__dock">
-          {error ? <p className="chat-window__error">{error}</p> : null}
+          {error ? (
+            <div className="chat-window__error-row">
+              <p className="chat-window__error">{error}</p>
+              {error.includes("demo threads") ? (
+                <button
+                  className="chat-window__error-action"
+                  type="button"
+                  onClick={handleCheckDemoThreads}
+                >
+                  Check demo threads
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
           <form className="chat-window__input-shell" onSubmit={handleSubmit}>
             <button

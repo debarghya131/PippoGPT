@@ -9,9 +9,9 @@ const aj = arcjetKey
         tokenBucket({
           mode: "LIVE",
           characteristics: ["userId"],
-          refillRate: 5,
-          interval: 60,
-          capacity: 10,
+          refillRate: 3,
+          interval: 86400,
+          capacity: 3,
         }),
       ],
     })
@@ -47,7 +47,7 @@ export const protectChatRateLimit = async (req, res, next) => {
     if (decision.isDenied()) {
       if (decision.reason.isRateLimit()) {
         return res.status(429).json({
-          error: "Too many chat requests. Please slow down and try again shortly.",
+          error: "Daily chat limit reached. You can send up to 3 messages per day.",
         });
       }
 

@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import Thread from "../models/Thread.js";
 import getOpenAIAPIResponse from "../utils/Openai.js";
 import { requireAuth } from "../utils/Auth.js";
+import { protectChatRateLimit } from "../utils/Arcjet.js";
 
 const router = Router();
 
@@ -91,7 +92,7 @@ router.delete("/thread/:threadId", async (req, res) => {
   }
 });
 
-router.post("/chat", async (req, res) => {
+router.post("/chat", protectChatRateLimit, async (req, res) => {
   const { message, threadId, title } = req.body;
 
   if (!message || typeof message !== "string" || !message.trim()) {
