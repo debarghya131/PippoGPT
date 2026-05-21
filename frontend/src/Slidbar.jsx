@@ -1,4 +1,3 @@
-import { useState } from "react";
 import "./Slidbar.css";
 
 function Slidbar({
@@ -12,11 +11,6 @@ function Slidbar({
   onSelectThread,
   onDeleteThread,
 }) {
-  const [showAllThreads, setShowAllThreads] = useState(false);
-  const visibleThreadCount = 13;
-
-  const visibleThreads = showAllThreads ? threads : threads.slice(0, visibleThreadCount);
-  const hasHiddenThreads = threads.length > visibleThreadCount;
   const featuredThreadTitles = new Set([
     "Debarghya Bandyopadhyay Chat",
     "Semester Wise Engineering Guidance",
@@ -61,10 +55,12 @@ function Slidbar({
           {isLoading ? (
             <p className="slidbar__status">Loading threads...</p>
           ) : threads.length === 0 ? (
-            <p className="slidbar__status">No chats yet. Start a new one.</p>
+            <p className="slidbar__status">
+              {isDemoMode ? "Browse demo chats. Login to unlock real chat actions." : "No chats yet. Start a new one."}
+            </p>
           ) : (
             <>
-              {visibleThreads.map((thread) => (
+              {threads.map((thread) => (
                 <div
                   key={thread.threadId}
                   className={`slidbar__thread-row${
@@ -107,16 +103,6 @@ function Slidbar({
                   </button>
                 </div>
               ))}
-
-              {hasHiddenThreads ? (
-                <button
-                  className="slidbar__more"
-                  type="button"
-                  onClick={() => setShowAllThreads((currentValue) => !currentValue)}
-                >
-                  {showAllThreads ? "Show less" : `More (${threads.length - visibleThreadCount})`}
-                </button>
-              ) : null}
             </>
           )}
         </div>

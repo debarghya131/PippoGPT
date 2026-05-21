@@ -1,3 +1,4 @@
+import { useAuth, useUser } from "@clerk/react";
 import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import Slidbar from "./Slidbar.jsx";
@@ -6,21 +7,12 @@ import AuthModal from "./AuthModal.jsx";
 import { DEMO_THREADS } from "./demoChats.js";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-const AUTH_STORAGE_KEY = "pippogpt_auth";
-
-const getStoredAuth = () => {
-  try {
-    const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
-    return storedAuth ? JSON.parse(storedAuth) : null;
-  } catch {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    return null;
-  }
-};
 
 function App() {
-  const [auth, setAuth] = useState(getStoredAuth);
-  const [threads, setThreads] = useState(DEMO_THREADS);
+  const { getToken, isLoaded: isAuthLoaded, isSignedIn, signOut } = useAuth();
+  const { user: clerkUser } = useUser();
+  const [backendUser, setBackendUser] = useState(null);
+  const [threads, setThreads] = useState([]);
   const [activeThreadId, setActiveThreadId] = useState("");
   const [threadSelectionKey, setThreadSelectionKey] = useState(0);
   const [messages, setMessages] = useState([]);
@@ -28,10 +20,9 @@ function App() {
   const [deletingThreadId, setDeletingThreadId] = useState("");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [authError, setAuthError] = useState("");
   const [notice, setNotice] = useState("");
 
-  const isAuthenticated = Boolean(auth?.token);
+  const isAuthenticated = Boolean(isSignedIn);
 
   const showNotice = useCallback((message) => {
     setNotice(message);
@@ -39,15 +30,36 @@ function App() {
     showNotice.timeoutId = window.setTimeout(() => setNotice(""), 3200);
   }, []);
 
-  const authHeaders = useCallback(
-    () => ({
-      Authorization: `Bearer ${auth?.token}`,
-    }),
-    [auth?.token],
-  );
+  const buildAuthHeaders = useCallback(async () => {
+    const token = await getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }, [getToken]);
+
+  const syncBackendUser = useCallback(async () => {
+    if (!isSignedIn) {
+      setBackendUser(null);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
+        method: "POST",
+        headers: await buildAuthHeaders(),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to sync user");
+      }
+
+      setBackendUser(data.user || null);
+    } catch (error) {
+      console.error("User sync error:", error.message);
+    }
+  }, [buildAuthHeaders, isSignedIn]);
 
   const loadThreads = useCallback(async (preferredThreadId = "") => {
-    if (!auth?.token) {
+    if (!isSignedIn) {
       setThreads(DEMO_THREADS);
       setThreadsLoading(false);
       return;
@@ -56,7 +68,7 @@ function App() {
     try {
       setThreadsLoading(true);
       const response = await fetch(`${API_BASE_URL}/api/thread`, {
-        headers: authHeaders(),
+        headers: await buildAuthHeaders(),
       });
       const data = await response.json();
 
@@ -77,10 +89,11 @@ function App() {
       }
     } catch (error) {
       console.error("Thread fetch error:", error.message);
+      setThreads([]);
     } finally {
       setThreadsLoading(false);
     }
-  }, [activeThreadId, auth?.token, authHeaders]);
+  }, [activeThreadId, buildAuthHeaders, isSignedIn]);
 
   const loadThreadMessages = useCallback(async (threadId) => {
     if (!threadId) {
@@ -88,7 +101,7 @@ function App() {
       return;
     }
 
-    if (!auth?.token) {
+    if (!isSignedIn) {
       const demoThread = DEMO_THREADS.find((thread) => thread.threadId === threadId);
       setMessages(demoThread?.messages || []);
       setActiveThreadId(threadId);
@@ -97,7 +110,7 @@ function App() {
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/thread/${threadId}`, {
-        headers: authHeaders(),
+        headers: await buildAuthHeaders(),
       });
       const data = await response.json();
 
@@ -110,9 +123,15 @@ function App() {
     } catch (error) {
       console.error("Thread load error:", error.message);
     }
-  }, [auth?.token, authHeaders]);
+  }, [buildAuthHeaders, isSignedIn]);
 
   const handleNewChat = () => {
+    if (!isAuthenticated) {
+      showNotice("Login first to start a real chat.");
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     setActiveThreadId("");
     setThreadSelectionKey((currentValue) => currentValue + 1);
     setMessages([]);
@@ -134,7 +153,7 @@ function App() {
       setDeletingThreadId(threadId);
       const response = await fetch(`${API_BASE_URL}/api/thread/${threadId}`, {
         method: "DELETE",
-        headers: authHeaders(),
+        headers: await buildAuthHeaders(),
       });
       const data = await response.json();
 
@@ -160,42 +179,9 @@ function App() {
     }
   };
 
-  const handleAuthSubmit = async (mode, form) => {
-    setAuthError("");
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/${mode}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Authentication failed");
-      }
-
-      const nextAuth = {
-        token: data.token,
-        user: data.user,
-      };
-
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextAuth));
-      setAuth(nextAuth);
-      setMessages([]);
-      setActiveThreadId("");
-      setIsAuthModalOpen(false);
-      showNotice("Logged in successfully. Your real chats are now enabled.");
-    } catch (error) {
-      setAuthError(error.message || "Authentication failed");
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    setAuth(null);
+  const handleLogout = async () => {
+    await signOut();
+    setBackendUser(null);
     setThreads(DEMO_THREADS);
     setActiveThreadId("");
     setMessages([]);
@@ -203,8 +189,30 @@ function App() {
   };
 
   useEffect(() => {
+    if (!isAuthLoaded) {
+      return;
+    }
+
     loadThreads();
-  }, [loadThreads]);
+  }, [isAuthLoaded, loadThreads]);
+
+  useEffect(() => {
+    if (!isAuthLoaded) {
+      return;
+    }
+
+    if (isSignedIn) {
+      setThreads([]);
+      syncBackendUser();
+      setMessages([]);
+      setActiveThreadId("");
+      setIsAuthModalOpen(false);
+      showNotice("Logged in successfully. Your real chats are now enabled.");
+      return;
+    }
+
+    setBackendUser(null);
+  }, [isAuthLoaded, isSignedIn, showNotice, syncBackendUser]);
 
   useEffect(() => {
     if (activeThreadId) {
@@ -235,13 +243,13 @@ function App() {
           onDeleteThread={handleDeleteThread}
         />
         <ChatWindow
-          userName={auth?.user?.name || "Buddy"}
+          userName={backendUser?.name || clerkUser?.firstName || "Buddy"}
           isAuthenticated={isAuthenticated}
           activeThreadId={activeThreadId}
           threadSelectionKey={threadSelectionKey}
           messages={messages}
           setMessages={setMessages}
-          authHeaders={authHeaders}
+          buildAuthHeaders={buildAuthHeaders}
           onRequireLogin={() => {
             showNotice("You need to login first.");
             setIsAuthModalOpen(true);
@@ -258,8 +266,6 @@ function App() {
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
-          onSubmit={handleAuthSubmit}
-          error={authError}
         />
       </header>
     </div>

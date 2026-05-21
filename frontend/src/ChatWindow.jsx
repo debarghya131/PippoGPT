@@ -152,7 +152,7 @@ function ChatWindow({
   threadSelectionKey,
   messages,
   setMessages,
-  authHeaders,
+  buildAuthHeaders,
   onRequireLogin,
   onOpenSidebar,
   onLoginClick,
@@ -231,7 +231,7 @@ function ChatWindow({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...authHeaders(),
+          ...(await buildAuthHeaders()),
         },
         body: JSON.stringify({
           message: trimmedInput,

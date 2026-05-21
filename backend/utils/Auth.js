@@ -1,93 +1,52 @@
-import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import { clerkClient, getAuth } from "@clerk/express";
 import User from "../models/User.js";
 
-const TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
-const PASSWORD_KEY_LENGTH = 64;
+const getPrimaryEmail = (clerkUser) =>
+  clerkUser.emailAddresses.find((emailAddress) => emailAddress.id === clerkUser.primaryEmailAddressId)
+    ?.emailAddress ||
+  clerkUser.emailAddresses[0]?.emailAddress ||
+  "";
 
-const getAuthSecret = () => process.env.AUTH_SECRET || process.env.GROQ_API_KEY;
-
-const toBase64Url = (value) => Buffer.from(value).toString("base64url");
-
-const fromBase64Url = (value) => Buffer.from(value, "base64url").toString("utf8");
-
-const sign = (payload) =>
-  createHmac("sha256", getAuthSecret()).update(payload).digest("base64url");
-
-export const hashPassword = (password) => {
-  const salt = randomBytes(16).toString("hex");
-  const hash = scryptSync(password, salt, PASSWORD_KEY_LENGTH).toString("hex");
-  return `${salt}:${hash}`;
+const getDisplayName = (clerkUser) => {
+  const fullName = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim();
+  return fullName || clerkUser.username || getPrimaryEmail(clerkUser) || "Pippo User";
 };
 
-export const verifyPassword = (password, passwordHash) => {
-  const [salt, storedHash] = passwordHash.split(":");
+export const syncClerkUser = async (clerkUserId) => {
+  const clerkUser = await clerkClient.users.getUser(clerkUserId);
+  const email = getPrimaryEmail(clerkUser).toLowerCase();
+  const name = getDisplayName(clerkUser);
+  const user =
+    (await User.findOne({
+      $or: [{ clerkId: clerkUser.id }, { email }],
+    })) ||
+    new User();
 
-  if (!salt || !storedHash) {
-    return false;
+  user.clerkId = clerkUser.id;
+  user.email = email;
+  user.name = name;
+
+  if (!user.passwordHash) {
+    user.passwordHash = "";
   }
 
-  const hash = scryptSync(password, salt, PASSWORD_KEY_LENGTH);
-  const storedHashBuffer = Buffer.from(storedHash, "hex");
+  await user.save();
 
-  return (
-    hash.length === storedHashBuffer.length &&
-    timingSafeEqual(hash, storedHashBuffer)
-  );
-};
-
-export const createAuthToken = (user) => {
-  const payload = toBase64Url(
-    JSON.stringify({
-      userId: user._id.toString(),
-      exp: Math.floor(Date.now() / 1000) + TOKEN_MAX_AGE_SECONDS,
-    }),
-  );
-
-  return `${payload}.${sign(payload)}`;
-};
-
-export const verifyAuthToken = (token) => {
-  if (!token || !token.includes(".")) {
-    return null;
-  }
-
-  const [payload, signature] = token.split(".");
-  const expectedSignature = sign(payload);
-
-  if (
-    signature.length !== expectedSignature.length ||
-    !timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
-  ) {
-    return null;
-  }
-
-  try {
-    const data = JSON.parse(fromBase64Url(payload));
-
-    if (!data.userId || !data.exp || data.exp < Math.floor(Date.now() / 1000)) {
-      return null;
-    }
-
-    return data;
-  } catch {
-    return null;
-  }
+  return user;
 };
 
 export const requireAuth = async (req, res, next) => {
-  const token = req.headers.authorization?.replace("Bearer ", "");
-  const tokenData = verifyAuthToken(token);
+  try {
+    const { isAuthenticated, userId } = getAuth(req);
 
-  if (!tokenData) {
-    return res.status(401).json({ error: "Please login first" });
+    if (!isAuthenticated || !userId) {
+      return res.status(401).json({ error: "Please login first" });
+    }
+
+    req.user = await syncClerkUser(userId);
+    return next();
+  } catch (error) {
+    console.error("Authentication error:", error.message);
+    return res.status(401).json({ error: "Unable to verify login" });
   }
-
-  const user = await User.findById(tokenData.userId).select("_id name email");
-
-  if (!user) {
-    return res.status(401).json({ error: "Please login first" });
-  }
-
-  req.user = user;
-  return next();
 };

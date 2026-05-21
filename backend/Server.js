@@ -1,3 +1,4 @@
+import { clerkMiddleware } from "@clerk/express";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -7,7 +8,13 @@ import authRoutes from "./routes/Auth.js";
 
 dotenv.config();
 
-const requiredEnvVars = ["MONGODB_URI", "GROQ_API_KEY", "GROQ_MODEL"];
+const requiredEnvVars = [
+  "MONGODB_URI",
+  "GROQ_API_KEY",
+  "GROQ_MODEL",
+  "CLERK_PUBLISHABLE_KEY",
+  "CLERK_SECRET_KEY",
+];
 const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
@@ -21,6 +28,7 @@ const ALLOW_START_WITHOUT_DB = process.env.ALLOW_START_WITHOUT_DB === "true";
 let isDatabaseConnected = false;
 
 app.use(cors());
+app.use(clerkMiddleware());
 app.use(express.json());
 app.use("/api", authRoutes);
 app.use("/api", chatRoutes);
