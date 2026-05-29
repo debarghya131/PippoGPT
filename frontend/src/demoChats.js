@@ -25,96 +25,6 @@ const DEMO_THREAD_ITEMS = [
     ],
   },
   {
-    threadId: "demo-2",
-    title: "Village Student Engineering Journey Chat",
-    messages: [
-      { role: "user", content: "i come from a village area" },
-      {
-        role: "assistant",
-        content:
-          "That does not limit your potential. Many successful engineers started from small villages and rural backgrounds.",
-      },
-      { role: "user", content: "i studied in arts background before" },
-      {
-        role: "assistant",
-        content:
-          "Changing streams and entering engineering can be difficult, but it’s possible with consistency and hard work.",
-      },
-      { role: "user", content: "people say village students cannot compete" },
-      {
-        role: "assistant",
-        content:
-          "That’s not true. Skills, discipline, and persistence matter more than background.",
-      },
-      { role: "user", content: "i feel behind compared to city students" },
-      {
-        role: "assistant",
-        content:
-          "Many students from cities may get more exposure early, but you can catch up step by step.",
-      },
-      { role: "user", content: "english communication is weak" },
-      {
-        role: "assistant",
-        content:
-          "That’s very common. Communication improves with daily practice, listening, reading, and speaking slowly with confidence.",
-      },
-      { role: "user", content: "example" },
-      {
-        role: "assistant",
-        content:
-          "For example, many students initially struggle to speak English in college but become confident after practicing presentations, interviews, and conversations regularly.",
-      },
-      { role: "user", content: "financial problems also affect studies" },
-      {
-        role: "assistant",
-        content:
-          "Financial struggles can make the journey harder, but they also build resilience and determination.",
-      },
-      { role: "user", content: "sometimes i feel inferior" },
-      {
-        role: "assistant",
-        content:
-          "Your background is not your weakness. Reaching engineering despite struggles already shows strength.",
-      },
-      { role: "user", content: "people laugh at my pronunciation" },
-      {
-        role: "assistant",
-        content:
-          "Everyone learns at their own pace. Skills improve with practice, and confidence matters more than perfection.",
-      },
-      { role: "user", content: "example of improvement" },
-      {
-        role: "assistant",
-        content:
-          "For example, a student may struggle in first-year presentations but later crack interviews through consistent practice and confidence building.",
-      },
-      { role: "user", content: "i have self doubt" },
-      {
-        role: "assistant",
-        content:
-          "Self-doubt is normal during difficult journeys, especially when entering a competitive environment.",
-      },
-      { role: "user", content: "how to stay motivated" },
-      {
-        role: "assistant",
-        content:
-          "Remember why you started. Focus on learning one step at a time instead of comparing yourself with others.",
-      },
-      { role: "user", content: "can village students become software engineers" },
-      {
-        role: "assistant",
-        content:
-          "Absolutely. Many software engineers, toppers, and entrepreneurs come from rural and humble backgrounds.",
-      },
-      { role: "user", content: "final advice" },
-      {
-        role: "assistant",
-        content:
-          "Never feel ashamed of your roots. Your struggles can become your biggest source of strength and motivation 🚀",
-      },
-    ],
-  },
-  {
     threadId: "demo-quick-sort",
     title: "Quick Sort Chat",
     messages: [
@@ -857,16 +767,11 @@ const DEMO_THREAD_ITEMS = [
 ];
 
 const FEATURED_DEMO_TITLE = "Debarghya Bandyopadhyay Chat";
-const LAST_DEMO_TITLE = "Village Student Engineering Journey Chat";
 const featuredDemoThread = DEMO_THREAD_ITEMS.find(
   (thread) => thread.title === FEATURED_DEMO_TITLE,
 );
-const lastDemoThread = DEMO_THREAD_ITEMS.find((thread) => thread.title === LAST_DEMO_TITLE);
 
 export const DEMO_THREADS = [
   featuredDemoThread,
-  ...DEMO_THREAD_ITEMS.filter(
-    (thread) => ![FEATURED_DEMO_TITLE, LAST_DEMO_TITLE].includes(thread.title),
-  ),
-  lastDemoThread,
+  ...DEMO_THREAD_ITEMS.filter((thread) => thread.title !== FEATURED_DEMO_TITLE),
 ].filter(Boolean);
