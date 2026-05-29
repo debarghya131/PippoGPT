@@ -448,6 +448,12 @@ const DEMO_THREAD_ITEMS = [
         content:
           "To become a skilled software engineer, AI developer, and build impactful tech products 🚀",
       },
+      { role: "user", content: "how can i connect with him" },
+      {
+        role: "assistant",
+        content:
+          "[![LinkedIn](https://img.shields.io/badge/LinkedIn-Debarghya%20Bandyopadhyay-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/debarghya-bandyopadhyay-953b02400?utm_source=share_via&utm_content=profile&utm_medium=member_android)\n\n[![X](https://img.shields.io/badge/X-debarghya131-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/debarghya131)\n\n[![GitHub](https://img.shields.io/badge/GitHub-debarghya131-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/debarghya131)\n\n[![Portfolio](https://img.shields.io/badge/Portfolio-portfolio.debarghya.org-14A800?style=for-the-badge&logo=vercel&logoColor=white)](https://portfolio.debarghya.org)\n\n[![Email](https://img.shields.io/badge/Email-debarghyabandyopadhyay191%40gmail.com-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:debarghyabandyopadhyay191@gmail.com)",
+      },
     ],
   },
   {

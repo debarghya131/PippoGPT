@@ -371,6 +371,43 @@
   }
 }
 
+@media (max-width: 430px) {
+  .slidbar {
+    width: min(94vw, 20rem);
+    padding-left: max(0.55rem, env(safe-area-inset-left));
+    padding-right: 0.55rem;
+  }
+
+  .slidbar__compose {
+    min-height: 3.5rem;
+  }
+
+  .slidbar__logo-wrap {
+    width: 2.15rem;
+    height: 2.15rem;
+    flex-basis: 2.15rem;
+  }
+
+  .slidbar__brand-name {
+    font-size: 0.92rem;
+  }
+
+  .slidbar__brand-subtitle,
+  .slidbar__section-heading {
+    font-size: 0.72rem;
+  }
+
+  .slidbar__thread {
+    min-height: 2.6rem;
+    font-size: 0.86rem;
+  }
+
+  .slidbar__delete {
+    width: 2.45rem;
+    height: 2.45rem;
+  }
+}
+
 .slidbar__heart {
   color: #ff4d5a;
   line-height: 1;
