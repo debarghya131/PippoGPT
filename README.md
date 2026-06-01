@@ -4,7 +4,7 @@ PippoGPT is a full-stack AI chat assistant built with React, Express, MongoDB, C
 
 ## 🚀 Live Demo Link
 
-Live demo: https://pippo.debarghya.org
+Live demo: https://pippo.debarghya.org   👈
 
 ## 💡 Motivation
 
