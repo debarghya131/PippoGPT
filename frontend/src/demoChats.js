@@ -128,6 +128,96 @@ const DEMO_THREAD_ITEMS = [
     ],
   },
   {
+    threadId: "demo-11",
+    title: "Hackathon Importance Chat",
+    messages: [
+      { role: "user", content: "Are hackathons really important in college?" },
+      {
+        role: "assistant",
+        content:
+          "Absolutely. Hackathons are one of the fastest ways to gain practical experience, build projects, network with people, and improve problem-solving skills.",
+      },
+      { role: "user", content: "But I am not very good at coding yet." },
+      {
+        role: "assistant",
+        content:
+          "That's exactly why you should participate. Most students think hackathons are only for experts, but many people attend their first hackathon just to learn.",
+      },
+      { role: "user", content: "Can beginners actually benefit?" },
+      {
+        role: "assistant",
+        content:
+          "Definitely. A beginner can learn more in a 24-48 hour hackathon than in weeks of watching tutorials.",
+      },
+      { role: "user", content: "How?" },
+      {
+        role: "assistant",
+        content:
+          "Because you're forced to build something real. You encounter real problems, search for solutions, collaborate with teammates, and learn technologies in a practical way.",
+      },
+      { role: "user", content: "Give me an example." },
+      {
+        role: "assistant",
+        content:
+          "Imagine a second-year student who only knows basic HTML, CSS, and JavaScript. They join a hackathon and build a simple AI study planner with teammates. They learn Git, APIs, teamwork, and deployment during the event. That's real experience.",
+      },
+      { role: "user", content: "What if I don't win?" },
+      {
+        role: "assistant",
+        content:
+          "Winning is a bonus. The real reward is the experience, skills, connections, and projects you gain.",
+      },
+      { role: "user", content: "Do recruiters care about hackathons?" },
+      {
+        role: "assistant",
+        content:
+          "Yes. Recruiters often see hackathons as proof that you can learn quickly, solve problems, and work under pressure.",
+      },
+      { role: "user", content: "Example?" },
+      {
+        role: "assistant",
+        content:
+          "Imagine two students with similar CGPAs. One only has coursework. The other has participated in hackathons and built multiple projects. Recruiters often find the second profile more interesting because it demonstrates practical skills.",
+      },
+      { role: "user", content: "Can hackathons help with internships?" },
+      {
+        role: "assistant",
+        content:
+          "Absolutely. Many students get internship opportunities, referrals, and networking connections through hackathons.",
+      },
+      { role: "user", content: "What about confidence?" },
+      {
+        role: "assistant",
+        content:
+          "Hackathons build confidence because they teach you that you can create something valuable even when you don't know everything beforehand.",
+      },
+      { role: "user", content: "Example?" },
+      {
+        role: "assistant",
+        content:
+          "A village student might initially feel intimidated competing against students from top colleges. After participating in a few hackathons, they realize everyone struggles, learns, and Googles solutions. That realization alone boosts confidence tremendously.",
+      },
+      { role: "user", content: "What skills do hackathons improve?" },
+      {
+        role: "assistant",
+        content:
+          "- Problem Solving\n- Teamwork\n- Communication\n- Project Building\n- Presentation Skills\n- Time Management\n- Learning New Technologies Quickly",
+      },
+      { role: "user", content: "How many hackathons should I participate in?" },
+      {
+        role: "assistant",
+        content:
+          "As many as possible during college. Even one hackathon every semester can significantly improve your profile.",
+      },
+      { role: "user", content: "Final advice?" },
+      {
+        role: "assistant",
+        content:
+          'Don\'t wait until you feel "ready." Most people become ready because they participate. A hackathon can be the place where a student stops being a learner and starts becoming a builder 🚀',
+      },
+    ],
+  },
+  {
     threadId: "demo-limerence",
     title: "Limerence Chat",
     messages: [
@@ -299,7 +389,7 @@ const DEMO_THREAD_ITEMS = [
       {
         role: "assistant",
         content:
-          "Yes, here are some projects:\n\n1. **MonkMode** - for self improvement, tracking, and analysis of progress.\n2. **Actual** - an AI-powered personal finance and analysis app.\n3. **School Alumin** - guidance platform for village students.\n4. **Invex** - retail inventory management system.\n5. **LearnX** - a learning management and course-selling app.",
+          "Yes, here are some projects:\n\n1. **MonkMode** - for self improvement, tracking, and analysis of progress.\n2. **Actual** - an AI-powered personal finance and analysis app.\n3. **InstaMeet** - Real-Time Video Meeting Platform.\n4. **Inventra** - retail inventory management system.\n5. **LearnSphere** - a learning management and course-selling app.",
       },
       { role: "user", content: "monkmode project" },
       {
@@ -313,38 +403,33 @@ const DEMO_THREAD_ITEMS = [
         content:
           "It is an AI-powered personal finance analytics app built using **React.js, Python, Flask, MongoDB, and Machine Learning** for smart financial insights.",
       },
-      { role: "user", content: "school alumin project" },
+      { role: "user", content: "instameet project" },
       {
         role: "assistant",
         content:
-          "It is a mentorship and student guidance platform built using **MERN Stack, authentication systems, real-time chat, and recommendation features** for village students.",
+          "It is a real-time video meeting platform built for **live calls**, **collaboration**, and **meeting**.",
       },
       { role: "user", content: "is he into ai" },
       {
         role: "assistant",
         content:
-          "Yes, he is interested in **AI, machine learning, robotics, and automation**.",
+          "Yes, he is interested in **AI, machine learning, IoT, and automation**.",
       },
-      { role: "user", content: "robotics also" },
+      { role: "user", content: "IoT also" },
       {
         role: "assistant",
-        content: "Yes, he is building a **Raspberry Pi** based study buddy robot.",
+        content: "Yes, he is building **IoT** projects using Raspberry Pi and smart automation.",
       },
       { role: "user", content: "coding achievements" },
       {
         role: "assistant",
         content:
-          "He solved **600+** coding problems and **ranked 3rd** in TECHPHORIA-2023 coding competition.",
+          "He solved **600+** coding problems and **ranked 3rd** in inter college coding competition.",
       },
       { role: "user", content: "favorite subjects" },
       {
         role: "assistant",
         content: "Data Structures, DBMS, Operating Systems, and Computer Networks.",
-      },
-      { role: "user", content: "preparing for gate" },
-      {
-        role: "assistant",
-        content: "Yes, he is preparing for the GATE 2027 examination.",
       },
       { role: "user", content: "gym also" },
       {
@@ -364,67 +449,6 @@ const DEMO_THREAD_ITEMS = [
         content:
           "[![LinkedIn](https://img.shields.io/badge/LinkedIn-Debarghya%20Bandyopadhyay-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/debarghya-bandyopadhyay-953b02400?utm_source=share_via&utm_content=profile&utm_medium=member_android)\n\n[![X](https://img.shields.io/badge/X-debarghya131-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/debarghya131)\n\n[![GitHub](https://img.shields.io/badge/GitHub-debarghya131-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/debarghya131)\n\n[![Portfolio](https://img.shields.io/badge/Portfolio-portfolio.debarghya.org-14A800?style=for-the-badge&logo=vercel&logoColor=white)](https://portfolio.debarghya.org)\n\n[![Email](https://img.shields.io/badge/Email-debarghyabandyopadhyay191%40gmail.com-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:debarghyabandyopadhyay191@gmail.com)",
       },
-    ],
-  },
-  {
-    threadId: "demo-5",
-    title: "Attachment & Limerence Chat",
-    messages: [
-      { role: "user", content: "what is attachment" },
-      {
-        role: "assistant",
-        content:
-          "Attachment is the emotional bond we form with people, especially close relationships.",
-      },
-      { role: "user", content: "what is limerence" },
-      {
-        role: "assistant",
-        content: "Limerence is an intense emotional obsession or infatuation with someone.",
-      },
-      { role: "user", content: "difference between love and limerence" },
-      {
-        role: "assistant",
-        content:
-          "Love is usually stable and realistic, while limerence is intense, obsessive, and driven by emotional highs.",
-      },
-      { role: "user", content: "signs of limerence" },
-      {
-        role: "assistant",
-        content:
-          "Constant thinking about someone, overanalyzing messages, emotional dependence, and craving validation.",
-      },
-      { role: "user", content: "can limerence go away" },
-      {
-        role: "assistant",
-        content:
-          "Yes, with time, self-focus, emotional awareness, and healthy boundaries, it usually fades.",
-      },
-      { role: "user", content: "how to manage it" },
-      {
-        role: "assistant",
-        content:
-          "Focus on hobbies, studies, fitness, friends, and limit emotional overdependence.",
-      },
-      { role: "user", content: "attachment style meaning" },
-      {
-        role: "assistant",
-        content:
-          "Attachment styles describe how people emotionally connect in relationships, like secure, anxious, or avoidant attachment.",
-      },
-      { role: "user", content: "anxious attachment means" },
-      {
-        role: "assistant",
-        content:
-          "It means someone may fear rejection, overthink relationships, and seek constant reassurance.",
-      },
-      { role: "user", content: "can people heal attachment issues" },
-      {
-        role: "assistant",
-        content:
-          "Yes, self-awareness, communication, therapy, and healthy relationships can help a lot.",
-      },
-      { role: "user", content: "thanks" },
-      { role: "assistant", content: "Anytime 🌱" },
     ],
   },
   {

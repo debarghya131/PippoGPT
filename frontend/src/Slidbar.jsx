@@ -15,6 +15,7 @@ function Slidbar({
     "Debarghya Bandyopadhyay Chat",
     "Semester Wise Engineering Guidance",
     "3-Month Interview Preparation Roadmap Chat",
+    "Hackathon Importance Chat",
   ]);
   const isFeaturedThread = (thread) => isDemoMode && featuredThreadTitles.has(thread.title);
 
