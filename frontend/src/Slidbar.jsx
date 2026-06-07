@@ -7,6 +7,7 @@ function Slidbar({
   activeThreadId,
   isLoading,
   deletingThreadId,
+  demoViews,
   onNewChat,
   onSelectThread,
   onDeleteThread,
@@ -20,7 +21,11 @@ function Slidbar({
   const isFeaturedThread = (thread) => isDemoMode && featuredThreadTitles.has(thread.title);
 
   return (
-    <aside className={`slidbar${isOpen ? " slidbar--open" : ""}`}>
+    <aside
+      className={`slidbar${isOpen ? " slidbar--open" : ""}${
+        isDemoMode ? " slidbar--demo" : ""
+      }`}
+    >
       <div className="slidbar__top">
         <button
           className="slidbar__compose"
@@ -78,7 +83,39 @@ function Slidbar({
                     type="button"
                     onClick={() => onSelectThread(thread.threadId)}
                   >
-                    {thread.title || "Untitled chat"}
+                    <span className="slidbar__thread-title">
+                      {thread.title || "Untitled chat"}
+                    </span>
+                    {isDemoMode ? (
+                      <span
+                        className="slidbar__thread-views"
+                        aria-label={
+                          demoViews === null
+                            ? "Loading views"
+                            : `${demoViews[thread.threadId] || 0} views`
+                        }
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path
+                            d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeLinejoin="round"
+                            strokeWidth="1.8"
+                          />
+                          <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+                        </svg>
+                        {demoViews === null ? (
+                          <span className="slidbar__thread-views-loader" aria-hidden="true">
+                            <i />
+                            <i />
+                            <i />
+                          </span>
+                        ) : (
+                          Number(demoViews[thread.threadId] || 0).toLocaleString()
+                        )}
+                      </span>
+                    ) : null}
                   </button>
                   <button
                     className="slidbar__delete"

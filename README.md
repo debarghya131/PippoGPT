@@ -23,6 +23,7 @@ The motivation behind PippoGPT was to build a ChatGPT-style assistant with a rea
 - Copy-code button for generated code
 - Responsive sidebar and chat layout
 - Arcjet-based daily chat rate limiting
+- Persistent website and per-demo view counters
 - Backend health check endpoint
 
 ## 🏗️ Architecture
@@ -77,17 +78,27 @@ The frontend handles the chat UI, demo mode, authentication modal, thread select
 pippo_gpt/
 ├── backend/
 │   ├── models/
+│   │   ├── SiteStat.js
 │   │   ├── Thread.js
-│   │   └── User.js
+│   │   ├── User.js
+│   │   └── ViewSession.js
 │   ├── routes/
 │   │   ├── Auth.js
-│   │   └── Chat.js
+│   │   ├── Chat.js
+│   │   └── Views.js
 │   ├── scripts/
-│   │   └── migrateClerkUsers.js
+│   │   ├── migrateClerkUsers.js
+│   │   └── syncIndexes.js
+│   ├── test/
+│   │   ├── app.test.js
+│   │   ├── chat.test.js
+│   │   ├── models.test.js
+│   │   └── views.test.js
 │   ├── utils/
 │   │   ├── Arcjet.js
 │   │   ├── Auth.js
 │   │   └── Openai.js
+│   ├── App.js
 │   ├── Server.js
 │   ├── package.json
 │   ├── package-lock.json
@@ -103,10 +114,8 @@ pippo_gpt/
 │   │   ├── App.css
 │   │   ├── AuthModal.jsx
 │   │   ├── AuthModal.css
-│   │   ├── Chat.jsx
 │   │   ├── Chat.css
 │   │   ├── ChatWindow.jsx
-│   │   ├── MyContext.jsx
 │   │   ├── Slidbar.jsx
 │   │   ├── Slidbar.css
 │   │   ├── demoChats.js
@@ -296,6 +305,7 @@ Create a `.env` file inside `backend/`:
 
 ```env
 PORT=5000
+NODE_ENV=development
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/pippo_gpt
 GROQ_API_KEY=your_groq_api_key
 GROQ_MODEL=your_groq_model
@@ -303,6 +313,7 @@ CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 CLERK_SECRET_KEY=your_clerk_secret_key
 ARCJET_KEY=your_arcjet_key
 ARCJET_ENV=development
+CORS_ORIGINS=http://localhost:5173,https://pippo.debarghya.org
 ALLOW_START_WITHOUT_DB=false
 ```
 
@@ -329,8 +340,8 @@ VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 - Used Clerk middleware to protect backend routes
 - Created a user sync utility to connect Clerk accounts with MongoDB records
 - Stored every chat as a thread with embedded message history
-- Sent full thread context to Groq for better follow-up answers
-- Added Arcjet token bucket rate limiting for chat requests
+- Sent bounded recent thread context to Groq for follow-up answers
+- Added Arcjet rate limiting for chat and counter requests
 - Added backend environment validation and a `/health` route
 - Used React Markdown and rehype-highlight for readable AI responses
 
@@ -339,19 +350,20 @@ VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 Current available checks:
 
 ```bash
+cd backend
+npm test
+
 cd frontend
 npm run lint
 npm run build
 ```
 
-The backend currently has a placeholder test script:
+Synchronize MongoDB indexes after schema or index changes:
 
 ```bash
 cd backend
-npm test
+npm run db:sync-indexes
 ```
-
-Automated backend tests are a future improvement.
 
 ## ⚡ Optimization
 
@@ -359,6 +371,7 @@ Automated backend tests are a future improvement.
 - Chat messages are rendered optimistically while waiting for API response
 - MongoDB fields such as `clerkId`, `email`, and `userId` are indexed
 - Backend returns normalized thread metadata for the sidebar
+- Stored threads retain the latest 100 messages, while AI requests use bounded recent context
 - Frontend build is handled through Vite for fast development and optimized production assets
 
 ## 🛡️ Security
@@ -366,21 +379,19 @@ Automated backend tests are a future improvement.
 - Clerk authentication protects backend API routes
 - Backend checks required environment variables before startup
 - Sensitive values are stored in `.env` files and excluded from Git
-- Arcjet rate limiting helps control abuse and API usage
+- Arcjet rate limiting protects chat and public counter updates
 - MongoDB queries are scoped by authenticated user ID
-
-For production, configure stricter CORS origins instead of using open CORS.
+- Production requests fail closed if Arcjet protection is unavailable
+- Production CORS is restricted to configured frontend origins
 
 ## 🔮 Future Improvements
 
 - Add live deployment link
 - Add screenshots and demo video
-- Add backend unit and integration tests
 - Add streaming AI responses
 - Add real model selection
 - Add attachment support
 - Add voice input support
-- Improve production CORS configuration
 - Add pagination for long chat histories
 - Add better analytics and error monitoring
 

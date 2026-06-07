@@ -9,6 +9,7 @@ const MessageSchema = new mongoose.Schema({
     content: {
         type: String,
         required: true,
+        maxlength: 10000,
     },
     timestamp: {
         type: Date,
@@ -22,6 +23,7 @@ const ThreadSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
+        maxlength: 128,
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -32,6 +34,7 @@ const ThreadSchema = new mongoose.Schema({
     title: {
         type: String,
         default: "New Thread",
+        maxlength: 60,
     },
     messages: [MessageSchema],
     createdAt: {
@@ -44,5 +47,6 @@ const ThreadSchema = new mongoose.Schema({
     },
 });
 
-export default mongoose.model("Thread", ThreadSchema);  
+ThreadSchema.index({ userId: 1, updatedAt: -1 });
 
+export default mongoose.model("Thread", ThreadSchema);

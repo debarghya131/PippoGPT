@@ -1,28 +1,55 @@
 import { useAuth, useUser } from "@clerk/react";
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import Slidbar from "./Slidbar.jsx";
 import ChatWindow from "./ChatWindow.jsx";
-import AuthModal from "./AuthModal.jsx";
 import { DEMO_THREADS } from "./demoChats.js";
 
+const AuthModal = lazy(() => import("./AuthModal.jsx"));
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const VIEW_SESSION_KEY = "pippo_gpt_view_counted";
+const VIEW_SESSION_ID_KEY = "pippo_gpt_view_session_id";
+const DEMO_VIEW_SESSION_PREFIX = "pippo_gpt_demo_view_counted:";
+
+const getViewSessionId = () => {
+  try {
+    const existingSessionId = window.sessionStorage.getItem(VIEW_SESSION_ID_KEY);
+
+    if (existingSessionId && existingSessionId !== "true") {
+      return existingSessionId;
+    }
+
+    const sessionId = window.crypto.randomUUID();
+    window.sessionStorage.setItem(VIEW_SESSION_ID_KEY, sessionId);
+    return sessionId;
+  } catch {
+    return window.crypto.randomUUID();
+  }
+};
 
 function App() {
   const { getToken, isLoaded: isAuthLoaded, isSignedIn, signOut } = useAuth();
   const { user: clerkUser } = useUser();
   const [backendUser, setBackendUser] = useState(null);
+  const [backendAuthStatus, setBackendAuthStatus] = useState("idle");
   const [threads, setThreads] = useState([]);
   const [activeThreadId, setActiveThreadId] = useState("");
   const [threadSelectionKey, setThreadSelectionKey] = useState(0);
   const [messages, setMessages] = useState([]);
+  const [isThreadLoading, setIsThreadLoading] = useState(false);
   const [threadsLoading, setThreadsLoading] = useState(true);
   const [deletingThreadId, setDeletingThreadId] = useState("");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notice, setNotice] = useState("");
+  const [websiteViews, setWebsiteViews] = useState(null);
+  const [demoViews, setDemoViews] = useState(null);
+  const threadLoadRequestRef = useRef(0);
+  const countedDemoViewsRef = useRef(new Set());
+  const authSyncRequestRef = useRef(0);
 
   const isAuthenticated = Boolean(isSignedIn);
+  const isBackendReady = isAuthenticated && backendAuthStatus === "ready";
 
   const showNotice = useCallback((message) => {
     setNotice(message);
@@ -38,8 +65,13 @@ function App() {
   const syncBackendUser = useCallback(async () => {
     if (!isSignedIn) {
       setBackendUser(null);
+      setBackendAuthStatus("idle");
       return;
     }
+
+    const requestId = authSyncRequestRef.current + 1;
+    authSyncRequestRef.current = requestId;
+    setBackendAuthStatus("loading");
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
@@ -52,16 +84,32 @@ function App() {
         throw new Error(data.error || "Failed to sync user");
       }
 
-      setBackendUser(data.user || null);
+      if (authSyncRequestRef.current === requestId) {
+        setBackendUser(data.user || null);
+        setBackendAuthStatus("ready");
+        showNotice("Logged in successfully. Your real chats are now enabled.");
+      }
     } catch (error) {
       console.error("User sync error:", error.message);
+
+      if (authSyncRequestRef.current === requestId) {
+        setBackendUser(null);
+        setBackendAuthStatus("error");
+        showNotice("Login succeeded, but the backend account connection failed.");
+      }
     }
-  }, [buildAuthHeaders, isSignedIn]);
+  }, [buildAuthHeaders, isSignedIn, showNotice]);
 
   const loadThreads = useCallback(async (preferredThreadId = "") => {
     if (!isSignedIn) {
       setThreads(DEMO_THREADS);
       setThreadsLoading(false);
+      return;
+    }
+
+    if (backendAuthStatus !== "ready") {
+      setThreads([]);
+      setThreadsLoading(backendAuthStatus === "loading" || backendAuthStatus === "idle");
       return;
     }
 
@@ -93,18 +141,30 @@ function App() {
     } finally {
       setThreadsLoading(false);
     }
-  }, [activeThreadId, buildAuthHeaders, isSignedIn]);
+  }, [activeThreadId, backendAuthStatus, buildAuthHeaders, isSignedIn]);
 
   const loadThreadMessages = useCallback(async (threadId) => {
+    const requestId = threadLoadRequestRef.current + 1;
+    threadLoadRequestRef.current = requestId;
+
     if (!threadId) {
       setMessages([]);
+      setIsThreadLoading(false);
       return;
     }
 
+    setIsThreadLoading(true);
+    setMessages([]);
+
     if (!isSignedIn) {
       const demoThread = DEMO_THREADS.find((thread) => thread.threadId === threadId);
-      setMessages(demoThread?.messages || []);
-      setActiveThreadId(threadId);
+      await new Promise((resolve) => window.setTimeout(resolve, 450));
+
+      if (threadLoadRequestRef.current === requestId) {
+        setMessages(demoThread?.messages || []);
+        setActiveThreadId(threadId);
+        setIsThreadLoading(false);
+      }
       return;
     }
 
@@ -118,10 +178,16 @@ function App() {
         throw new Error(data.error || "Failed to fetch thread");
       }
 
-      setMessages(Array.isArray(data.thread?.messages) ? data.thread.messages : []);
-      setActiveThreadId(threadId);
+      if (threadLoadRequestRef.current === requestId) {
+        setMessages(Array.isArray(data.thread?.messages) ? data.thread.messages : []);
+        setActiveThreadId(threadId);
+      }
     } catch (error) {
       console.error("Thread load error:", error.message);
+    } finally {
+      if (threadLoadRequestRef.current === requestId) {
+        setIsThreadLoading(false);
+      }
     }
   }, [buildAuthHeaders, isSignedIn]);
 
@@ -132,13 +198,77 @@ function App() {
       return;
     }
 
+    if (!isBackendReady) {
+      showNotice("Your backend account connection is not ready.");
+      return;
+    }
+
+    threadLoadRequestRef.current += 1;
+    setIsThreadLoading(false);
     setActiveThreadId("");
     setThreadSelectionKey((currentValue) => currentValue + 1);
     setMessages([]);
     setIsSidebarOpen(false);
   };
 
+  const countDemoThreadView = useCallback(async (threadId) => {
+    if (!threadId.startsWith("demo-") || countedDemoViewsRef.current.has(threadId)) {
+      return;
+    }
+
+    const sessionKey = `${DEMO_VIEW_SESSION_PREFIX}${threadId}`;
+
+    try {
+      if (window.sessionStorage.getItem(sessionKey) === "true") {
+        countedDemoViewsRef.current.add(threadId);
+        return;
+      }
+    } catch {
+      // The in-memory set still prevents duplicate counts during this page visit.
+    }
+
+    countedDemoViewsRef.current.add(threadId);
+
+    try {
+      window.sessionStorage.setItem(sessionKey, "true");
+    } catch {
+      // Continue when browser storage is unavailable.
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/views/demo/${threadId}`, {
+        method: "POST",
+        headers: {
+          "X-View-Session": getViewSessionId(),
+        },
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update demo views");
+      }
+
+      setDemoViews((currentViews) => ({
+        ...(currentViews || {}),
+        [threadId]: data.views,
+      }));
+    } catch (error) {
+      console.error("Demo view counter error:", error.message);
+      countedDemoViewsRef.current.delete(threadId);
+
+      try {
+        window.sessionStorage.removeItem(sessionKey);
+      } catch {
+        // Ignore storage cleanup failures.
+      }
+    }
+  }, []);
+
   const handleSelectThread = (threadId) => {
+    if (!isAuthenticated) {
+      countDemoThreadView(threadId);
+    }
+
     setActiveThreadId(threadId);
     setThreadSelectionKey((currentValue) => currentValue + 1);
   };
@@ -146,6 +276,11 @@ function App() {
   const handleDeleteThread = async (threadId) => {
     if (!isAuthenticated) {
       showNotice("This is demo chats. You cannot delete this. Please login first.");
+      return;
+    }
+
+    if (!isBackendReady) {
+      showNotice("Your backend account connection is not ready.");
       return;
     }
 
@@ -165,6 +300,8 @@ function App() {
       setThreads(remainingThreads);
 
       if (activeThreadId === threadId) {
+        threadLoadRequestRef.current += 1;
+        setIsThreadLoading(false);
         const nextActiveThreadId = remainingThreads[0]?.threadId || "";
         setActiveThreadId(nextActiveThreadId);
 
@@ -180,8 +317,12 @@ function App() {
   };
 
   const handleLogout = async () => {
+    threadLoadRequestRef.current += 1;
+    authSyncRequestRef.current += 1;
+    setIsThreadLoading(false);
     await signOut();
     setBackendUser(null);
+    setBackendAuthStatus("idle");
     setThreads(DEMO_THREADS);
     setActiveThreadId("");
     setMessages([]);
@@ -202,17 +343,20 @@ function App() {
     }
 
     if (isSignedIn) {
+      threadLoadRequestRef.current += 1;
+      setIsThreadLoading(false);
       setThreads([]);
       syncBackendUser();
       setMessages([]);
       setActiveThreadId("");
       setIsAuthModalOpen(false);
-      showNotice("Logged in successfully. Your real chats are now enabled.");
       return;
     }
 
+    authSyncRequestRef.current += 1;
     setBackendUser(null);
-  }, [isAuthLoaded, isSignedIn, showNotice, syncBackendUser]);
+    setBackendAuthStatus("idle");
+  }, [isAuthLoaded, isSignedIn, syncBackendUser]);
 
   useEffect(() => {
     if (activeThreadId) {
@@ -220,6 +364,71 @@ function App() {
       setIsSidebarOpen(false);
     }
   }, [activeThreadId, loadThreadMessages]);
+
+  useEffect(() => {
+    const loadWebsiteViews = async () => {
+      let hasCountedView = false;
+
+      try {
+        hasCountedView = window.sessionStorage.getItem(VIEW_SESSION_KEY) === "true";
+
+        if (!hasCountedView) {
+          window.sessionStorage.setItem(VIEW_SESSION_KEY, "true");
+        }
+      } catch {
+        // Continue without session deduplication when browser storage is unavailable.
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/views`, {
+          method: hasCountedView ? "GET" : "POST",
+          headers: hasCountedView
+            ? undefined
+            : {
+                "X-View-Session": getViewSessionId(),
+              },
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load website views");
+        }
+
+        setWebsiteViews(Number.isFinite(data.views) ? data.views : null);
+      } catch (error) {
+        console.error("Website view counter error:", error.message);
+
+        if (!hasCountedView) {
+          try {
+            window.sessionStorage.removeItem(VIEW_SESSION_KEY);
+          } catch {
+            // Ignore storage cleanup failures.
+          }
+        }
+      }
+    };
+
+    loadWebsiteViews();
+  }, []);
+
+  useEffect(() => {
+    const loadDemoViews = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/views/demo`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load demo views");
+        }
+
+        setDemoViews(data.views && typeof data.views === "object" ? data.views : {});
+      } catch (error) {
+        console.error("Demo views fetch error:", error.message);
+      }
+    };
+
+    loadDemoViews();
+  }, []);
 
   return (
     <div className="App">
@@ -238,6 +447,7 @@ function App() {
           activeThreadId={activeThreadId}
           isLoading={threadsLoading}
           deletingThreadId={deletingThreadId}
+          demoViews={demoViews}
           onNewChat={handleNewChat}
           onSelectThread={handleSelectThread}
           onDeleteThread={handleDeleteThread}
@@ -245,9 +455,12 @@ function App() {
         <ChatWindow
           userName={backendUser?.name || clerkUser?.firstName || "Buddy"}
           isAuthenticated={isAuthenticated}
+          isBackendReady={isBackendReady}
+          websiteViews={websiteViews}
           activeThreadId={activeThreadId}
           threadSelectionKey={threadSelectionKey}
           messages={messages}
+          isThreadLoading={isThreadLoading}
           setMessages={setMessages}
           buildAuthHeaders={buildAuthHeaders}
           onRequireLogin={() => {
@@ -264,10 +477,12 @@ function App() {
           }}
           onRefreshThreads={() => loadThreads(activeThreadId)}
         />
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <AuthModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
+          />
+        </Suspense>
       </header>
     </div>
   );

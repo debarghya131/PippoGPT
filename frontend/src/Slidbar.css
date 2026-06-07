@@ -118,7 +118,7 @@
   scroll-behavior: smooth;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   padding-left: 2px;
   padding-right: 2px;
   padding-bottom: 12px;
@@ -151,18 +151,18 @@
 
 .slidbar__thread-row {
   width: 100%;
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
+  align-items: stretch;
   border-radius: 10px;
   padding: 2px 0;
 }
 
 .slidbar__thread {
-  flex: 1;
+  width: 100%;
   min-width: 0;
   min-height: 3rem;
-  padding: 0.5rem 0.625rem;
+  padding: 0.6rem 0.7rem;
   border: 0;
   background: transparent;
   color: #f0f0f0;
@@ -173,8 +173,71 @@
   border-radius: 10px;
   transition: background-color 0.2s ease, color 0.2s ease;
   white-space: normal;
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
   overflow-wrap: anywhere;
+}
+
+.slidbar__thread-title {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.slidbar__thread-views {
+  flex: 0 0 auto;
+  min-width: 2.25rem;
+  color: rgba(255, 255, 255, 0.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.slidbar__thread-views svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.slidbar__thread-views-loader {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12rem;
+}
+
+.slidbar__thread-views-loader i {
+  width: 0.16rem;
+  height: 0.16rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: slidbar__view-dot 1s ease-in-out infinite;
+}
+
+.slidbar__thread-views-loader i:nth-child(2) {
+  animation-delay: 0.14s;
+}
+
+.slidbar__thread-views-loader i:nth-child(3) {
+  animation-delay: 0.28s;
+}
+
+@keyframes slidbar__view-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-0.1rem);
+  }
 }
 
 .slidbar__thread--truncate {
@@ -241,9 +304,12 @@
 }
 
 .slidbar__delete {
-  flex: 0 0 auto;
-  width: 3rem;
-  height: 3rem;
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  z-index: 2;
+  width: 2.25rem;
+  height: 2.25rem;
   padding: 0;
   border: 0;
   border-radius: 10px;
@@ -256,6 +322,7 @@
   justify-content: center;
   opacity: 0;
   pointer-events: none;
+  transform: translateY(-50%);
   transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
 }
 
@@ -271,6 +338,28 @@
   color: #ffffff;
 }
 
+.slidbar__thread-row:hover .slidbar__thread:not(.slidbar__thread--featured),
+.slidbar__thread-row:focus-within .slidbar__thread:not(.slidbar__thread--featured) {
+  padding-right: 3.1rem;
+}
+
+.slidbar--demo .slidbar__thread {
+  padding-right: 5.8rem;
+}
+
+.slidbar--demo .slidbar__thread-views {
+  position: absolute;
+  top: 50%;
+  right: 3rem;
+  z-index: 1;
+  transform: translateY(-50%);
+}
+
+.slidbar--demo .slidbar__thread-row:hover .slidbar__thread,
+.slidbar--demo .slidbar__thread-row:focus-within .slidbar__thread {
+  padding-right: 5.8rem;
+}
+
 .slidbar__thread-row:not(.slidbar__thread-row--featured):hover .slidbar__thread,
 .slidbar__thread-row:not(.slidbar__thread-row--featured):focus-within .slidbar__thread {
   background: rgba(255, 255, 255, 0.06);
@@ -280,7 +369,7 @@
 .slidbar__delete:hover:not(:disabled) {
   background: rgba(248, 113, 113, 0.12);
   color: #ef4444;
-  transform: translateY(-1px);
+  transform: translateY(-50%) scale(1.03);
 }
 
 .slidbar__delete:hover:not(:disabled) svg,
@@ -363,6 +452,14 @@
     height: 2.65rem;
     opacity: 1;
     pointer-events: auto;
+  }
+
+  .slidbar__thread-row .slidbar__thread:not(.slidbar__thread--featured) {
+    padding-right: 3.35rem;
+  }
+
+  .slidbar--demo .slidbar__thread-row .slidbar__thread {
+    padding-right: 5.8rem;
   }
 
   .slidbar__footer {
@@ -449,7 +546,7 @@
   .slidbar {
     position: sticky;
     top: 0;
-    width: clamp(16rem, 18vw, 18rem);
+    width: clamp(19rem, 21vw, 21rem);
     transform: none;
   }
 }

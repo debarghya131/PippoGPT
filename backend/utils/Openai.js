@@ -17,6 +17,8 @@ Rules:
 - If the user asks an ambiguous coding question, make the most reasonable assumption and say it briefly.
 - Keep formatting clean and easy to read.
 `.trim();
+const MAX_CONTEXT_MESSAGES = 30;
+const MAX_CONTEXT_CHARACTERS = 24000;
 
 const getLastUserMessage = (messages) =>
   [...messages].reverse().find((message) => message.role === "user")?.content?.trim() || "";
@@ -48,6 +50,31 @@ const buildRequestInstruction = (messages) => {
   return "Answer normally, but keep the response concise and clear.";
 };
 
+export const buildConversationContext = (messages) => {
+  const selectedMessages = [];
+  let characterCount = 0;
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    const content = typeof message.content === "string" ? message.content : "";
+
+    if (
+      selectedMessages.length >= MAX_CONTEXT_MESSAGES ||
+      characterCount + content.length > MAX_CONTEXT_CHARACTERS
+    ) {
+      break;
+    }
+
+    selectedMessages.push({
+      role: message.role,
+      content,
+    });
+    characterCount += content.length;
+  }
+
+  return selectedMessages.reverse();
+};
+
 const getOpenAIAPIResponse = async (messages) => {
   try {
     const requestInstruction = buildRequestInstruction(messages);
@@ -62,10 +89,7 @@ const getOpenAIAPIResponse = async (messages) => {
           role: "system",
           content: requestInstruction,
         },
-        ...messages.map((message) => ({
-          role: message.role,
-          content: message.content,
-        })),
+        ...buildConversationContext(messages),
       ],
       model: process.env.GROQ_MODEL,
       temperature: 0.4,

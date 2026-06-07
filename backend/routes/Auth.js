@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../utils/Auth.js";
+import { requireAuth, requireFreshAuth } from "../utils/Auth.js";
 
 const router = Router();
 
@@ -10,7 +10,7 @@ const buildUserResponse = (user) => ({
   email: user.email,
 });
 
-router.post("/auth/sync", requireAuth, (req, res) => {
+router.post("/auth/sync", requireFreshAuth, (req, res) => {
   return res.status(200).json({
     user: buildUserResponse(req.user),
   });

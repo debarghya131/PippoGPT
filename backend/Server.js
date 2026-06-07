@@ -1,19 +1,15 @@
-import { clerkMiddleware } from "@clerk/express";
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
+import "dotenv/config";
 import mongoose from "mongoose";
-import chatRoutes from "./routes/Chat.js";
-import authRoutes from "./routes/Auth.js";
+import app from "./App.js";
 
-dotenv.config();
-
+const isProduction = process.env.NODE_ENV === "production";
 const requiredEnvVars = [
   "MONGODB_URI",
   "GROQ_API_KEY",
   "GROQ_MODEL",
   "CLERK_PUBLISHABLE_KEY",
   "CLERK_SECRET_KEY",
+  ...(isProduction ? ["ARCJET_KEY"] : []),
 ];
 const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
 
@@ -22,43 +18,18 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
-const app = express();
 const PORT = process.env.PORT || 5000;
 const ALLOW_START_WITHOUT_DB = process.env.ALLOW_START_WITHOUT_DB === "true";
-let isDatabaseConnected = false;
-
-app.use(cors());
-app.use(clerkMiddleware());
-app.use(express.json());
-app.use("/api", authRoutes);
-app.use("/api", chatRoutes);
 
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    isDatabaseConnected = true;
     console.log("MongoDB connected successfully");
   } catch (error) {
-    isDatabaseConnected = false;
     console.error("MongoDB connection error:", error.message);
     throw error;
   }
 };
-
-app.get("/", (req, res) => {
-  res.json({ message: "Pippo GPT backend is running" });
-});
-
-app.get("/health", (req, res) => {
-  const dbState = mongoose.connection.readyState;
-  const dbConnected = dbState === 1 || isDatabaseConnected;
-  const status = dbConnected ? "ok" : "degraded";
-
-  return res.status(dbConnected ? 200 : 503).json({
-    status,
-    database: dbConnected ? "connected" : "disconnected",
-  });
-});
 
 const startServer = async () => {
   try {

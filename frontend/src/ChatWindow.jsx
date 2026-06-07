@@ -148,9 +148,12 @@ function AssistantLabel() {
 function ChatWindow({
   userName,
   isAuthenticated,
+  isBackendReady,
+  websiteViews,
   activeThreadId,
   threadSelectionKey,
   messages,
+  isThreadLoading,
   setMessages,
   buildAuthHeaders,
   onRequireLogin,
@@ -163,17 +166,70 @@ function ChatWindow({
 }) {
   const messagesContainerRef = useRef(null);
   const pendingScrollKeyRef = useRef(0);
+  const activeThreadIdRef = useRef(activeThreadId);
+  const chatRequestRef = useRef({
+    id: 0,
+    controller: null,
+    threadId: "",
+    selectionKey: threadSelectionKey,
+  });
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
-  const isEmptyChat = messages.length === 0 && !isLoading;
+  const isEmptyChat = messages.length === 0 && !isLoading && !isThreadLoading;
 
   useEffect(() => {
     if (isAuthenticated) {
       setError("");
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    activeThreadIdRef.current = activeThreadId;
+    const pendingRequest = chatRequestRef.current;
+
+    const didConversationChange =
+      pendingRequest.threadId !== activeThreadId ||
+      pendingRequest.selectionKey !== threadSelectionKey;
+
+    if (pendingRequest.controller && didConversationChange) {
+      pendingRequest.controller.abort();
+      chatRequestRef.current = {
+        id: pendingRequest.id + 1,
+        controller: null,
+        threadId: activeThreadId,
+        selectionKey: threadSelectionKey,
+      };
+      setIsLoading(false);
+    }
+  }, [activeThreadId, threadSelectionKey]);
+
+  useEffect(() => {
+    if (isAuthenticated && isBackendReady) {
+      return;
+    }
+
+    const pendingRequest = chatRequestRef.current;
+
+    if (pendingRequest.controller) {
+      pendingRequest.controller.abort();
+      chatRequestRef.current = {
+        id: pendingRequest.id + 1,
+        controller: null,
+        threadId: activeThreadIdRef.current,
+        selectionKey: threadSelectionKey,
+      };
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, isBackendReady, threadSelectionKey]);
+
+  useEffect(
+    () => () => {
+      chatRequestRef.current.controller?.abort();
+    },
+    [],
+  );
 
   const scrollMessagesToTop = () => {
     if (!messagesContainerRef.current) {
@@ -207,7 +263,7 @@ function ChatWindow({
     event.preventDefault();
 
     const trimmedInput = input.trim();
-    if (!trimmedInput || isLoading) {
+    if (!trimmedInput || isLoading || isThreadLoading) {
       return;
     }
 
@@ -217,6 +273,16 @@ function ChatWindow({
       return;
     }
 
+    if (!isBackendReady) {
+      const backendError = "Your backend account connection is not ready.";
+      setError(backendError);
+      onShowNotice?.(backendError);
+      return;
+    }
+
+    const submittedThreadId = activeThreadId;
+    const requestId = chatRequestRef.current.id + 1;
+    const controller = new AbortController();
     const optimisticUserMessage = {
       role: "user",
       content: trimmedInput,
@@ -226,6 +292,12 @@ function ChatWindow({
     setIsLoading(true);
     setMessages((previousMessages) => [...previousMessages, optimisticUserMessage]);
     setInput("");
+    chatRequestRef.current = {
+      id: requestId,
+      controller,
+      threadId: submittedThreadId,
+      selectionKey: threadSelectionKey,
+    };
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
@@ -234,6 +306,7 @@ function ChatWindow({
           "Content-Type": "application/json",
           ...(await buildAuthHeaders()),
         },
+        signal: controller.signal,
         body: JSON.stringify({
           message: trimmedInput,
           threadId: activeThreadId || undefined,
@@ -242,6 +315,13 @@ function ChatWindow({
       });
 
       const data = await response.json();
+      const isCurrentRequest =
+        chatRequestRef.current.id === requestId &&
+        activeThreadIdRef.current === submittedThreadId;
+
+      if (!isCurrentRequest) {
+        return;
+      }
 
       if (!response.ok) {
         if (response.status === 429) {
@@ -262,10 +342,24 @@ function ChatWindow({
         onRefreshThreads();
       }
     } catch (requestError) {
-      setMessages((previousMessages) => previousMessages.slice(0, -1));
-      setError(requestError.message || "Unable to connect to backend");
+      const isCurrentRequest =
+        chatRequestRef.current.id === requestId &&
+        activeThreadIdRef.current === submittedThreadId;
+
+      if (requestError.name !== "AbortError" && isCurrentRequest) {
+        setMessages((previousMessages) => previousMessages.slice(0, -1));
+        setError(requestError.message || "Unable to connect to backend");
+      }
     } finally {
-      setIsLoading(false);
+      if (chatRequestRef.current.id === requestId) {
+        chatRequestRef.current = {
+          id: requestId,
+          controller: null,
+          threadId: activeThreadIdRef.current,
+          selectionKey: threadSelectionKey,
+        };
+        setIsLoading(false);
+      }
     }
   };
 
@@ -333,6 +427,44 @@ function ChatWindow({
               </div>
             ) : null}
           </div>
+
+          <div
+            className={`chat-window__view-count${
+              websiteViews === null ? " chat-window__view-count--loading" : ""
+            }`}
+            aria-live="polite"
+            aria-label={
+              websiteViews === null ? "Loading website views" : `${websiteViews} website views`
+            }
+            title="Website views"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+                fill="none"
+                stroke="currentColor"
+                strokeLinejoin="round"
+                strokeWidth="1.7"
+              />
+              <circle
+                cx="12"
+                cy="12"
+                r="2.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              />
+            </svg>
+            {websiteViews === null ? (
+              <span className="chat-window__view-loader" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+            ) : (
+              <span>{websiteViews.toLocaleString()}</span>
+            )}
+          </div>
         </div>
 
         {isAuthenticated ? (
@@ -357,7 +489,19 @@ function ChatWindow({
             isEmptyChat ? " chat-window__messages--empty" : ""
           }`}
         >
-          {messages.length === 0 ? (
+          {isThreadLoading ? (
+            <article className="chat-window__message chat-window__message--assistant">
+              <img
+                className="chat-window__message-logo"
+                src="/assets/pippo.png"
+                alt="Pippo logo"
+              />
+              <div className="chat-window__assistant-content">
+                <AssistantLabel />
+                <div className="chat-window__loader" aria-label="Loading chat" />
+              </div>
+            </article>
+          ) : messages.length === 0 ? (
             <div className="chat-window__empty">
               <div className="chat-window__empty-copy">
                 <div className="chat-window__empty-heading">
@@ -455,7 +599,7 @@ function ChatWindow({
               aria-label="Ask anything"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || isThreadLoading || (isAuthenticated && !isBackendReady)}
             />
 
             <div className="chat-window__actions">
@@ -480,7 +624,7 @@ function ChatWindow({
                 className={`chat-window__send${input.trim() ? " chat-window__send--active" : ""}`}
                 type="submit"
                 aria-label="Send message"
-                disabled={isLoading}
+                disabled={isLoading || isThreadLoading || (isAuthenticated && !isBackendReady)}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path
