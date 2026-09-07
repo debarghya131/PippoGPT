@@ -3,7 +3,7 @@ import { Router } from "express";
 import Thread from "../models/Thread.js";
 import { protectChatRateLimit } from "../utils/Arcjet.js";
 import { requireAuth } from "../utils/Auth.js";
-import getOpenAIAPIResponse from "../utils/Openai.js";
+import getGroqAPIResponse, { AIServiceError } from "../utils/Groq.js";
 
 const MAX_MESSAGE_LENGTH = 10000;
 const MAX_THREAD_ID_LENGTH = 128;
@@ -63,7 +63,7 @@ export const createChatRouter = ({
   ThreadModel = Thread,
   authMiddleware = requireAuth,
   rateLimitMiddleware = protectChatRateLimit,
-  getAIResponse = getOpenAIAPIResponse,
+  getAIResponse = getGroqAPIResponse,
 } = {}) => {
   const router = Router();
 
@@ -136,7 +136,7 @@ export const createChatRouter = ({
   });
 
   router.post("/chat", rateLimitMiddleware, async (req, res) => {
-    const { message, threadId, title } = req.body;
+    const { message, threadId, title } = req.body || {};
     const validationError = validateChatInput({ message, threadId, title });
 
     if (validationError) {
@@ -146,6 +146,7 @@ export const createChatRouter = ({
     const trimmedMessage = message.trim();
     const requestedThreadId = typeof threadId === "string" ? threadId.trim() : "";
     const currentThreadId = requestedThreadId || randomUUID();
+    let stage = "read_thread";
 
     try {
       const existingThread = await ThreadModel.findOne({
@@ -154,10 +155,12 @@ export const createChatRouter = ({
       });
       const userMessage = { role: "user", content: trimmedMessage };
       const contextMessages = [...(existingThread?.messages || []), userMessage];
+      stage = "generate_reply";
       const reply = await getAIResponse(contextMessages);
       const assistantMessage = { role: "assistant", content: reply };
       const now = new Date();
       let updatedThread;
+      stage = "save_thread";
 
       if (existingThread) {
         updatedThread = await ThreadModel.findOneAndUpdate(
@@ -214,7 +217,17 @@ export const createChatRouter = ({
         messages: updatedThread.messages,
       });
     } catch (error) {
-      console.error("Chat route error:", error.message);
+      console.error("Chat route error:", {
+        stage,
+        type: error.name,
+        code: error.code,
+        providerStatus: error.cause?.status,
+        providerCode: error.cause?.error?.code ?? error.cause?.error?.error?.code,
+        providerRequestId: error.cause?.headers?.get?.("x-request-id"),
+      });
+      if (error instanceof AIServiceError) {
+        return res.status(error.status).json({ error: error.message, code: error.code });
+      }
       return res.status(500).json({ error: "Failed to process chat request" });
     }
   });

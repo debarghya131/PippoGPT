@@ -97,7 +97,7 @@ pippo_gpt/
 │   ├── utils/
 │   │   ├── Arcjet.js
 │   │   ├── Auth.js
-│   │   └── Openai.js
+│   │   └── Groq.js
 │   ├── App.js
 │   ├── Server.js
 │   ├── package.json
@@ -116,8 +116,8 @@ pippo_gpt/
 │   │   ├── AuthModal.css
 │   │   ├── Chat.css
 │   │   ├── ChatWindow.jsx
-│   │   ├── Slidbar.jsx
-│   │   ├── Slidbar.css
+│   │   ├── Sidebar.jsx
+│   │   ├── Sidebar.css
 │   │   ├── demoChats.js
 │   │   ├── index.css
 │   │   └── main.jsx
@@ -264,32 +264,28 @@ git clone https://github.com/debarghya131/PippoGPT.git
 cd PippoGPT
 ```
 
-Install backend dependencies:
+Run the following commands from the repository root. Install backend dependencies:
 
 ```bash
-cd backend
-npm install
+npm --prefix backend ci
 ```
 
 Install frontend dependencies:
 
 ```bash
-cd ../frontend
-npm install
+npm --prefix frontend ci
 ```
 
 Start the backend:
 
 ```bash
-cd backend
-npm run dev
+npm --prefix backend run dev
 ```
 
-Start the frontend:
+Start the frontend in another terminal:
 
 ```bash
-cd frontend
-npm run dev
+npm --prefix frontend run dev
 ```
 
 Default local URLs:
@@ -347,23 +343,34 @@ VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 
 ## 🧪 Testing
 
-Current available checks:
+Run the available checks from the repository root:
 
 ```bash
-cd backend
-npm test
-
-cd frontend
-npm run lint
-npm run build
+npm --prefix backend test
+npm --prefix frontend run lint
+npm --prefix frontend run build
 ```
 
 Synchronize MongoDB indexes after schema or index changes:
 
 ```bash
-cd backend
-npm run db:sync-indexes
+npm --prefix backend run db:sync-indexes
 ```
+
+## Diagnosing chat failures
+
+Backend logs include `Chat route error` with the failing stage (`read_thread`,
+`generate_reply`, or `save_thread`), error code, and available provider status and
+request ID. Chat content, credentials, and raw provider errors are not logged.
+
+- `AI_RATE_LIMITED` (503): Groq is limiting requests; retry later. This is separate from the app's daily user limit (429).
+- `AI_CONFIGURATION_ERROR` (503): Check `GROQ_API_KEY`, `GROQ_MODEL`, and model access in the backend hosting environment.
+- `AI_TIMEOUT` (504): The provider request timed out.
+- `AI_REQUEST_FAILED` or `AI_INVALID_RESPONSE` (502): Check the provider status/code in backend logs and the configured model.
+- A 500 at `read_thread` or `save_thread`: Investigate the database connection, indexes, and schema validation.
+
+Groq documents its upstream statuses in the [API error reference](https://console.groq.com/docs/errors).
+Local environment files do not update Render's environment variables; deploy backend changes to apply these responses to the live site.
 
 ## ⚡ Optimization
 
@@ -386,8 +393,7 @@ npm run db:sync-indexes
 
 ## 🔮 Future Improvements
 
-- Add live deployment link
-- Add screenshots and demo video
+- Add demo video
 - Add streaming AI responses
 - Add real model selection
 - Add attachment support

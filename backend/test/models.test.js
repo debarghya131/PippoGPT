@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import User from "../models/User.js";
-import { buildConversationContext } from "../utils/Openai.js";
+import { buildConversationContext } from "../utils/Groq.js";
 
 test("phone-only Clerk users satisfy local user validation", async () => {
   const user = new User({

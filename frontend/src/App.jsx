@@ -1,7 +1,7 @@
 import { useAuth, useUser } from "@clerk/react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
-import Slidbar from "./Slidbar.jsx";
+import Sidebar from "./Sidebar.jsx";
 import ChatWindow from "./ChatWindow.jsx";
 import { DEMO_THREADS } from "./demoChats.js";
 
@@ -440,7 +440,7 @@ function App() {
           aria-label="Close sidebar"
           onClick={() => setIsSidebarOpen(false)}
         />
-        <Slidbar
+        <Sidebar
           isOpen={isSidebarOpen}
           isDemoMode={!isAuthenticated}
           threads={threads}

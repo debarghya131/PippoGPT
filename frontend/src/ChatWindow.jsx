@@ -348,6 +348,7 @@ function ChatWindow({
 
       if (requestError.name !== "AbortError" && isCurrentRequest) {
         setMessages((previousMessages) => previousMessages.slice(0, -1));
+        setInput((currentInput) => currentInput || trimmedInput);
         setError(requestError.message || "Unable to connect to backend");
       }
     } finally {

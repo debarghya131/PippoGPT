@@ -1,9 +1,30 @@
 import "dotenv/config";
 import Groq from "groq-sdk";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+let groq;
+
+export class AIServiceError extends Error {
+  constructor(message, status, code, cause) {
+    super(message, { cause });
+    this.name = "AIServiceError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+const classifyAIError = (error) => {
+  if (error instanceof AIServiceError) return error;
+  if (error?.status === 429) {
+    return new AIServiceError("The AI service is busy. Please try again later.", 503, "AI_RATE_LIMITED", error);
+  }
+  if (error?.status === 401 || error?.status === 403) {
+    return new AIServiceError("The AI service is unavailable. Please contact the site owner.", 503, "AI_CONFIGURATION_ERROR", error);
+  }
+  if (error instanceof Groq.APIConnectionTimeoutError) {
+    return new AIServiceError("The AI service took too long to respond. Please try again.", 504, "AI_TIMEOUT", error);
+  }
+  return new AIServiceError("The AI service could not answer this request. Please try again later.", 502, "AI_REQUEST_FAILED", error);
+};
 
 const SYSTEM_PROMPT = `
 You are PippoGPT, a helpful AI assistant.
@@ -75,11 +96,19 @@ export const buildConversationContext = (messages) => {
   return selectedMessages.reverse();
 };
 
-const getOpenAIAPIResponse = async (messages) => {
+export const createGroqResponder = ({ client, model = process.env.GROQ_MODEL?.trim() } = {}) => async (messages) => {
   try {
+    if (!model || (!client && !process.env.GROQ_API_KEY?.trim())) {
+      throw new AIServiceError("The AI service is unavailable. Please contact the site owner.", 503, "AI_CONFIGURATION_ERROR");
+    }
+    const activeClient = client || (groq ??= new Groq({
+      apiKey: process.env.GROQ_API_KEY.trim(),
+      timeout: 30000,
+      maxRetries: 1,
+    }));
     const requestInstruction = buildRequestInstruction(messages);
 
-    const chatCompletion = await groq.chat.completions.create({
+    const chatCompletion = await activeClient.chat.completions.create({
       messages: [
         {
           role: "system",
@@ -91,7 +120,7 @@ const getOpenAIAPIResponse = async (messages) => {
         },
         ...buildConversationContext(messages),
       ],
-      model: process.env.GROQ_MODEL,
+      model,
       temperature: 0.4,
       max_completion_tokens: requestInstruction.includes("very short code") ? 220 : 1024,
       top_p: 1,
@@ -99,12 +128,14 @@ const getOpenAIAPIResponse = async (messages) => {
       stop: null,
     });
 
-    const reply = chatCompletion.choices[0]?.message?.content || "";
+    const reply = chatCompletion?.choices?.[0]?.message?.content;
+    if (typeof reply !== "string" || !reply.trim() || reply.length > 10000) {
+      throw new AIServiceError("The AI service returned an unusable reply. Please try again.", 502, "AI_INVALID_RESPONSE");
+    }
     return reply;
   } catch (error) {
-    console.error("Error in getOpenAIAPIResponse:", error);
-    throw new Error("Failed to get response from Groq API");
+    throw classifyAIError(error);
   }
 };
 
-export default getOpenAIAPIResponse;
+export default createGroqResponder();

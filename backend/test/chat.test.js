@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createChatRouter } from "../routes/Chat.js";
+import { createGroqResponder } from "../utils/Groq.js";
 import { jsonRequest, requestRouter } from "../support/httpTestUtils.js";
 
 const authenticated = (req, res, next) => {
@@ -132,4 +133,50 @@ test("oversized chat messages are rejected", async () => {
   );
 
   assert.equal(response.status, 400);
+});
+
+test("provider rate limits return a service error without saving a partial chat", async () => {
+  let saved = false;
+  const router = createChatRouter({
+    ThreadModel: {
+      findOne: async () => null,
+      create: async () => { saved = true; },
+    },
+    authMiddleware: authenticated,
+    rateLimitMiddleware: allowRequest,
+    getAIResponse: createGroqResponder({
+      model: "test-model",
+      client: { chat: { completions: { create: async () => {
+        throw Object.assign(new Error("secret provider details"), { status: 429 });
+      } } } },
+    }),
+  });
+  const { response, body } = await requestRouter(router, "/chat", jsonRequest("POST", { message: "Hello" }));
+  assert.equal(response.status, 503);
+  assert.equal(body.code, "AI_RATE_LIMITED");
+  assert.ok(!JSON.stringify(body).includes("secret provider details"));
+  assert.equal(saved, false);
+});
+
+test("database errors stay internal and do not call Groq", async () => {
+  const router = createChatRouter({
+    ThreadModel: { findOne: async () => { throw new Error("private database details"); } },
+    authMiddleware: authenticated,
+    rateLimitMiddleware: allowRequest,
+    getAIResponse: async () => { assert.fail("Groq should not be called"); },
+  });
+  const { response, body } = await requestRouter(router, "/chat", jsonRequest("POST", { message: "Hello" }));
+  assert.equal(response.status, 500);
+  assert.deepEqual(body, { error: "Failed to process chat request" });
+});
+
+test("chat requests without a body are rejected as invalid input", async () => {
+  const router = createChatRouter({
+    ThreadModel: {},
+    authMiddleware: authenticated,
+    rateLimitMiddleware: allowRequest,
+  });
+  const { response, body } = await requestRouter(router, "/chat", { method: "POST" });
+  assert.equal(response.status, 400);
+  assert.equal(body.error, "Message is required");
 });

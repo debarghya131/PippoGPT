@@ -1,3 +1,14 @@
 node_modules/
 .env
-.codex
+.env.*
+!.env.example
+.codex/
+.agents/
+
+# Local workspace state and recoverable cleanup archives
+/openclaw-workspace-state.json
+/.local/
+
+# Generated files
+*.log
+.DS_Store
