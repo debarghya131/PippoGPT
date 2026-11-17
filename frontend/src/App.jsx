@@ -10,6 +10,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000
 const VIEW_SESSION_KEY = "pippo_gpt_view_counted";
 const VIEW_SESSION_ID_KEY = "pippo_gpt_view_session_id";
 const DEMO_VIEW_SESSION_PREFIX = "pippo_gpt_demo_view_counted:";
+const BACKEND_WAKE_TIMEOUT_MS = 60_000;
+const BACKEND_WAKE_RETRY_DELAY_MS = 2_000;
 
 const getViewSessionId = () => {
   try {
@@ -40,6 +42,8 @@ function App() {
   const [threadsLoading, setThreadsLoading] = useState(true);
   const [deletingThreadId, setDeletingThreadId] = useState("");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [backendWakeStatus, setBackendWakeStatus] = useState("idle");
+  const [backendWakeSecondsRemaining, setBackendWakeSecondsRemaining] = useState(60);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [websiteViews, setWebsiteViews] = useState(null);
@@ -47,6 +51,11 @@ function App() {
   const threadLoadRequestRef = useRef(0);
   const countedDemoViewsRef = useRef(new Set());
   const authSyncRequestRef = useRef(0);
+  const backendWakeRequestRef = useRef(0);
+  const backendWakeAbortRef = useRef(null);
+  const backendWakeTimeoutRef = useRef(null);
+  const backendWakeRetryRef = useRef(null);
+  const backendWakeDeadlineRef = useRef(0);
 
   const isAuthenticated = Boolean(isSignedIn);
   const isBackendReady = isAuthenticated && backendAuthStatus === "ready";
@@ -61,6 +70,109 @@ function App() {
     const token = await getToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }, [getToken]);
+
+  const cancelBackendWake = useCallback(() => {
+    backendWakeRequestRef.current += 1;
+    backendWakeAbortRef.current?.abort();
+    window.clearTimeout(backendWakeTimeoutRef.current);
+    window.clearTimeout(backendWakeRetryRef.current);
+    backendWakeAbortRef.current = null;
+    backendWakeTimeoutRef.current = null;
+    backendWakeRetryRef.current = null;
+  }, []);
+
+  const startBackendWake = useCallback(() => {
+    cancelBackendWake();
+
+    const requestId = backendWakeRequestRef.current + 1;
+    const controller = new AbortController();
+    backendWakeRequestRef.current = requestId;
+    backendWakeAbortRef.current = controller;
+    backendWakeDeadlineRef.current = Date.now() + BACKEND_WAKE_TIMEOUT_MS;
+    setBackendWakeSecondsRemaining(60);
+    setBackendWakeStatus("warming");
+    setIsAuthModalOpen(true);
+
+    const isCurrentRequest = () => backendWakeRequestRef.current === requestId;
+    const clearWakeTimers = () => {
+      window.clearTimeout(backendWakeTimeoutRef.current);
+      window.clearTimeout(backendWakeRetryRef.current);
+      backendWakeTimeoutRef.current = null;
+      backendWakeRetryRef.current = null;
+    };
+
+    const checkHealth = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/health`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (!isCurrentRequest()) {
+          return;
+        }
+
+        if (response.ok) {
+          clearWakeTimers();
+          backendWakeAbortRef.current = null;
+          setBackendWakeStatus("idle");
+          return;
+        }
+      } catch (error) {
+        if (error.name === "AbortError" || !isCurrentRequest()) {
+          return;
+        }
+      }
+
+      if (isCurrentRequest()) {
+        backendWakeRetryRef.current = window.setTimeout(checkHealth, BACKEND_WAKE_RETRY_DELAY_MS);
+      }
+    };
+
+    backendWakeTimeoutRef.current = window.setTimeout(() => {
+      if (!isCurrentRequest()) {
+        return;
+      }
+
+      backendWakeRequestRef.current += 1;
+      controller.abort();
+      backendWakeAbortRef.current = null;
+      window.clearTimeout(backendWakeRetryRef.current);
+      backendWakeRetryRef.current = null;
+      setBackendWakeSecondsRemaining(0);
+      setBackendWakeStatus("timed_out");
+    }, BACKEND_WAKE_TIMEOUT_MS);
+
+    checkHealth();
+  }, [cancelBackendWake]);
+
+  const closeAuthModal = useCallback(() => {
+    cancelBackendWake();
+    setBackendWakeStatus("idle");
+    setIsAuthModalOpen(false);
+  }, [cancelBackendWake]);
+
+  useEffect(() => {
+    if (backendWakeStatus !== "warming") {
+      return undefined;
+    }
+
+    const updateCountdown = () => {
+      const millisecondsRemaining = Math.max(0, backendWakeDeadlineRef.current - Date.now());
+      setBackendWakeSecondsRemaining(Math.ceil(millisecondsRemaining / 1000));
+    };
+
+    updateCountdown();
+    const intervalId = window.setInterval(updateCountdown, 250);
+    return () => window.clearInterval(intervalId);
+  }, [backendWakeStatus]);
+
+  useEffect(
+    () => () => {
+      cancelBackendWake();
+    },
+    [cancelBackendWake],
+  );
 
   const syncBackendUser = useCallback(async () => {
     if (!isSignedIn) {
@@ -194,7 +306,7 @@ function App() {
   const handleNewChat = () => {
     if (!isAuthenticated) {
       showNotice("Login first to start a real chat.");
-      setIsAuthModalOpen(true);
+      startBackendWake();
       return;
     }
 
@@ -349,14 +461,14 @@ function App() {
       syncBackendUser();
       setMessages([]);
       setActiveThreadId("");
-      setIsAuthModalOpen(false);
+      closeAuthModal();
       return;
     }
 
     authSyncRequestRef.current += 1;
     setBackendUser(null);
     setBackendAuthStatus("idle");
-  }, [isAuthLoaded, isSignedIn, syncBackendUser]);
+  }, [closeAuthModal, isAuthLoaded, isSignedIn, syncBackendUser]);
 
   useEffect(() => {
     if (activeThreadId) {
@@ -465,10 +577,10 @@ function App() {
           buildAuthHeaders={buildAuthHeaders}
           onRequireLogin={() => {
             showNotice("You need to login first.");
-            setIsAuthModalOpen(true);
+            startBackendWake();
           }}
           onOpenSidebar={() => setIsSidebarOpen(true)}
-          onLoginClick={() => setIsAuthModalOpen(true)}
+          onLoginClick={startBackendWake}
           onLogout={handleLogout}
           onShowNotice={showNotice}
           onThreadCreated={(threadId) => {
@@ -480,7 +592,10 @@ function App() {
         <Suspense fallback={null}>
           <AuthModal
             isOpen={isAuthModalOpen}
-            onClose={() => setIsAuthModalOpen(false)}
+            backendWakeStatus={backendWakeStatus}
+            secondsRemaining={backendWakeSecondsRemaining}
+            onRetry={startBackendWake}
+            onClose={closeAuthModal}
           />
         </Suspense>
       </header>

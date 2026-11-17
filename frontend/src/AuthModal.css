@@ -163,6 +163,71 @@
   box-sizing: border-box;
 }
 
+.auth-modal__wake-screen {
+  display: flex;
+  min-height: 15rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 0.75rem 0.5rem;
+  text-align: center;
+}
+
+.auth-modal__wake-screen h2 {
+  margin: 1.125rem 0 0;
+  font-size: 1.2rem;
+}
+
+.auth-modal__wake-screen p {
+  max-width: 22rem;
+  margin: 0.625rem 0 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.auth-modal__wake-screen .auth-modal__wake-countdown {
+  margin-top: 1.25rem;
+  color: #ffffff;
+}
+
+.auth-modal__wake-countdown strong {
+  color: #87b8ff;
+  font-variant-numeric: tabular-nums;
+}
+
+.auth-modal__wake-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid rgba(135, 184, 255, 0.25);
+  border-top-color: #87b8ff;
+  border-radius: 50%;
+  animation: auth-modal-spin 0.85s linear infinite;
+}
+
+.auth-modal__retry {
+  min-height: 2.75rem;
+  margin-top: 1.5rem;
+  padding: 0 1.125rem;
+  border: 0;
+  border-radius: 9px;
+  background: #2d7df6;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.auth-modal__retry:hover {
+  filter: brightness(1.06);
+}
+
+@keyframes auth-modal-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 767px) {
   .auth-modal {
     align-items: flex-start;
@@ -238,6 +303,11 @@
   .auth-modal__clerk-input,
   .auth-modal__clerk-primary-button {
     min-height: 3rem;
+  }
+
+  .auth-modal__wake-screen {
+    min-height: 13rem;
+    padding-inline: 0.25rem;
   }
 }
 
