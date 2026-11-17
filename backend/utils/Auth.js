@@ -1,11 +1,14 @@
 import { clerkClient, getAuth } from "@clerk/express";
 import User from "../models/User.js";
 
-const getPrimaryEmail = (clerkUser) =>
-  clerkUser.emailAddresses.find((emailAddress) => emailAddress.id === clerkUser.primaryEmailAddressId)
-    ?.emailAddress ||
-  clerkUser.emailAddresses[0]?.emailAddress ||
-  "";
+const getPrimaryEmailAddress = (clerkUser) =>
+  clerkUser.emailAddresses.find((emailAddress) => emailAddress.id === clerkUser.primaryEmailAddressId) ||
+  clerkUser.emailAddresses[0];
+
+const getPrimaryEmail = (clerkUser) => getPrimaryEmailAddress(clerkUser)?.emailAddress || "";
+
+export const hasVerifiedPrimaryEmail = (clerkUser) =>
+  getPrimaryEmailAddress(clerkUser)?.verification?.status === "verified";
 
 const getPrimaryPhone = (clerkUser) =>
   clerkUser.phoneNumbers.find((phoneNumber) => phoneNumber.id === clerkUser.primaryPhoneNumberId)
@@ -44,12 +47,16 @@ const updateLinkedUser = async (user, { clerkId, email, name }) => {
   return user;
 };
 
+const canRelinkExistingUser = (user, profile) =>
+  user.clerkId !== profile.clerkId && Boolean(profile.email) && profile.hasVerifiedPrimaryEmail;
+
 export const syncClerkUser = async (clerkUserId) => {
   const clerkUser = await clerkClient.users.getUser(clerkUserId);
   const profile = {
     clerkId: clerkUser.id,
     email: getPrimaryEmail(clerkUser).toLowerCase() || undefined,
     name: getDisplayName(clerkUser),
+    hasVerifiedPrimaryEmail: hasVerifiedPrimaryEmail(clerkUser),
   };
   let user = await User.findOne({ clerkId: profile.clerkId });
 
@@ -61,8 +68,12 @@ export const syncClerkUser = async (clerkUserId) => {
     user = await User.findOne({ email: profile.email });
 
     if (user) {
-      if (user.clerkId && user.clerkId !== profile.clerkId) {
+      if (user.clerkId && !canRelinkExistingUser(user, profile)) {
         throw new Error(`Email ${profile.email} is already linked to another Clerk account`);
+      }
+
+      if (canRelinkExistingUser(user, profile)) {
+        console.info("Relinking an existing local user to a verified Clerk account");
       }
 
       return updateLinkedUser(user, profile);
@@ -88,8 +99,15 @@ export const syncClerkUser = async (clerkUserId) => {
     user = await User.findOne({ email: profile.email });
   }
 
-  if (!user || (user.clerkId && user.clerkId !== profile.clerkId)) {
+  if (
+    !user ||
+    (user.clerkId && user.clerkId !== profile.clerkId && !canRelinkExistingUser(user, profile))
+  ) {
     throw new Error("Unable to safely sync user record");
+  }
+
+  if (canRelinkExistingUser(user, profile)) {
+    console.info("Relinking an existing local user to a verified Clerk account");
   }
 
   return updateLinkedUser(user, profile);
